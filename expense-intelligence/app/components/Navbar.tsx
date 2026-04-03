@@ -7,8 +7,9 @@ import { useState, useEffect } from "react";
 
 const BLUE = "#38BDF8";
 
-const navItems = [
+const navItems: { href: string; label: string; special?: boolean }[] = [
   { href: "/dashboard",  label: "Overview"    },
+  { href: "/autopilot",  label: "AI Advisor", special: true },
   { href: "/query",      label: "AI Query"    },
   { href: "/compliance", label: "Compliance"  },
   { href: "/approvals",  label: "Approvals"   },
@@ -97,6 +98,23 @@ export function Navbar() {
         <div className="hidden lg:flex items-center gap-0 flex-1 overflow-x-auto">
           {navItems.map((item) => {
             const active = pathname === item.href || (item.href !== "/dashboard" && pathname.startsWith(item.href));
+            if (item.special) {
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className="relative px-3 py-1 text-[12px] font-medium transition-all duration-200 whitespace-nowrap flex-shrink-0 flex items-center gap-1.5 rounded-lg mx-1"
+                  style={{
+                    background: active ? "rgba(56,189,248,0.15)" : "rgba(56,189,248,0.07)",
+                    border: `1px solid ${active ? "rgba(56,189,248,0.4)" : "rgba(56,189,248,0.2)"}`,
+                    color: active ? BLUE : "rgba(56,189,248,0.8)",
+                  }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#22C55E", boxShadow: "0 0 6px #22C55E" }} />
+                  {item.label}
+                </Link>
+              );
+            }
             return (
               <Link
                 key={item.href}
@@ -180,14 +198,17 @@ export function Navbar() {
                 <Link
                   key={item.href}
                   href={item.href}
-                  className="px-4 py-3 text-sm font-medium transition-all"
+                  className="px-4 py-3 text-sm font-medium transition-all flex items-center gap-2"
                   style={{
-                    color: active ? "white" : "rgba(255,255,255,0.4)",
-                    borderLeft: `2px solid ${active ? BLUE : "transparent"}`,
+                    color: active ? "white" : item.special ? "rgba(56,189,248,0.8)" : "rgba(255,255,255,0.4)",
+                    borderLeft: `2px solid ${active ? BLUE : item.special ? "rgba(56,189,248,0.3)" : "transparent"}`,
                     paddingLeft: "calc(1rem - 2px)",
                   }}
                   onClick={() => setMobileOpen(false)}
                 >
+                  {item.special && (
+                    <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: "#22C55E", boxShadow: "0 0 6px #22C55E" }} />
+                  )}
                   {item.label}
                 </Link>
               );

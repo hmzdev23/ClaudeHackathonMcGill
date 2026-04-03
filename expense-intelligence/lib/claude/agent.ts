@@ -4,6 +4,27 @@ import { handleToolCall } from './tool-handlers';
 import { SYSTEM_PROMPT } from './prompts';
 import type Anthropic from '@anthropic-ai/sdk';
 
+// ── Action Plan types (used by autopilot) ───────────────────────────────────
+export interface ActionItem {
+  id: string;
+  type: 'approve_expense' | 'deny_expense' | 'budget_alert' | 'anomaly_alert' | 'compliance_alert' | 'vendor_opportunity';
+  priority: 'urgent' | 'high' | 'medium' | 'low';
+  title: string;
+  reasoning: string;
+  target_id?: string;
+  amount?: number;
+  employee?: string;
+  department?: string;
+  auto_executable: boolean;
+}
+
+export interface ActionPlan {
+  summary: string;
+  risk_level: 'low' | 'medium' | 'high' | 'critical';
+  actions: ActionItem[];
+  insights: string[];
+}
+
 const MAX_ITERATIONS = 8;
 const STREAM_RETRIES = 4;
 
@@ -33,10 +54,11 @@ export interface VisualizationSpec {
 }
 
 export interface AgentStreamEvent {
-  type: 'text_delta' | 'tool_call' | 'visualization' | 'done' | 'error';
+  type: 'text_delta' | 'tool_call' | 'visualization' | 'action_plan' | 'done' | 'error';
   content?: string;
   tool?: string;
   visualization?: VisualizationSpec;
+  plan?: ActionPlan;
   error?: string;
 }
 
@@ -109,12 +131,14 @@ async function runOneIteration(
 }
 
 /**
- * Streaming agentic loop — used by POST /api/query.
+ * Streaming agentic loop — used by POST /api/query and POST /api/autopilot.
  * Returns a ReadableStream of newline-delimited JSON AgentStreamEvent objects.
  */
 export function runAgentStream(
   messages: Anthropic.Messages.MessageParam[],
-  systemPrompt: string = SYSTEM_PROMPT
+  systemPrompt: string = SYSTEM_PROMPT,
+  tools: Anthropic.Messages.Tool[] = EXPENSE_TOOLS,
+  toolHandler: (name: string, input: Record<string, unknown>) => unknown = handleToolCall
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
 
@@ -136,9 +160,9 @@ export function runAgentStream(
             client,
             {
               model: MODEL,
-              max_tokens: 4096,
+              max_tokens: 8192,
               system: systemPrompt,
-              tools: EXPENSE_TOOLS,
+              tools,
               messages: currentMessages,
             },
             send
@@ -149,22 +173,31 @@ export function runAgentStream(
 
           // Execute all tool calls
           const toolResults: Anthropic.Messages.ToolResultBlockParam[] = [];
+          let planEmitted = false;
 
           for (const toolBlock of completedToolUseBlocks) {
             let output: unknown;
             try {
-              output = handleToolCall(toolBlock.name, toolBlock.input as Record<string, unknown>);
+              output = toolHandler(toolBlock.name, toolBlock.input as Record<string, unknown>);
             } catch (err) {
               output = { error: err instanceof Error ? err.message : String(err) };
             }
 
             if (
-              toolBlock.name === 'render_visualization' &&
               output !== null &&
               typeof output === 'object' &&
               '_visualization' in (output as object)
             ) {
               send({ type: 'visualization', visualization: (output as { _visualization: VisualizationSpec })._visualization });
+            }
+
+            if (
+              output !== null &&
+              typeof output === 'object' &&
+              '_action_plan' in (output as object)
+            ) {
+              send({ type: 'action_plan', plan: (output as { _action_plan: ActionPlan })._action_plan });
+              planEmitted = true;
             }
 
             toolResults.push({
@@ -179,6 +212,9 @@ export function runAgentStream(
             { role: 'assistant', content: finalMessage.content },
             { role: 'user', content: toolResults },
           ];
+
+          // After emitting the action plan, stop the loop
+          if (planEmitted) break;
         }
 
         send({ type: 'done' });
