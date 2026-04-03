@@ -231,7 +231,7 @@ export default function DashboardPage() {
       <BGPattern variant="grid" mask="fade-three-sides" size={32} fill="rgba(255,255,255,0.025)" />
 
       {/* Header */}
-      <div className="flex items-end justify-between mb-12 animate-fade-up relative z-10">
+      <div className="mb-12 animate-fade-up relative z-10">
         <div>
           <div className="flex items-center gap-3 mb-5">
             <div className="h-px w-6" style={{ background: BLUE, opacity: 0.5 }} />
@@ -244,11 +244,6 @@ export default function DashboardPage() {
           <p className="text-body mt-4 max-w-md" style={{ opacity: 0.6 }}>
             AI-powered expense management for SMBs. Built with Claude API for multi-step reasoning and agentic workflows.
           </p>
-        </div>
-        <div className="flex items-center gap-2">
-          <button className="btn-ghost text-xs" onClick={() => seedDatabase("brim")} disabled={seeding}>
-            {seeding ? "Loading..." : "Reload Brim Data →"}
-          </button>
         </div>
       </div>
 
