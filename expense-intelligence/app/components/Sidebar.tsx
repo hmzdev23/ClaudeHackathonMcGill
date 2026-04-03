@@ -12,6 +12,7 @@ const navItems = [
   { href: "/anomalies", label: "Anomalies", tag: "04" },
   { href: "/budgets", label: "Budgets", tag: "05" },
   { href: "/reports", label: "Reports", tag: "06" },
+  { href: "/insights", label: "Insights", tag: "07" },
 ];
 
 export function Sidebar() {
