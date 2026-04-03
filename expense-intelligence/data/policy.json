@@ -1,0 +1,35 @@
+{
+  "company_name": "Brim Financial",
+  "approval_threshold": 50,
+  "receipt_required_above": 50,
+  "receipt_submission_deadline": "current_month",
+  "category_limits": {
+    "meals_solo": 75,
+    "meals_team": 150,
+    "travel_flight": 800,
+    "travel_hotel_per_night": 250,
+    "office_supplies": 200,
+    "software_saas": 500,
+    "conference_registration": 1500,
+    "equipment": 1000,
+    "entertainment": 200,
+    "training": 500,
+    "transportation": 2000,
+    "fuel": 1500,
+    "parking": 50
+  },
+  "tip_limits": {
+    "services_and_porterage_pct": 0.15,
+    "meals_max_pct": 0.20
+  },
+  "alcohol_policy": "not_permitted_unless_dining_with_customer",
+  "supplier_entertainment": "acceptable_with_guest_names_and_purpose_on_receipt",
+  "personal_vehicle_mileage": "reimbursed_at_CRA_rates",
+  "restricted_merchants": ["casino", "gambling", "adult", "lottery", "personal_use"],
+  "restricted_merchant_keywords": ["casino", "grand vegas", "gambling", "betting", "poker", "liquor store", "lcbo", "saq"],
+  "meal_category_names": ["meals", "food & beverage", "client entertainment", "team meals", "restaurants", "fast food"],
+  "travel_categories": ["flights", "hotels", "transportation", "travel", "fuel", "parking", "car rental"],
+  "notes": "All expenses over $50 require manager pre-authorization and receipts. Tips: 15% max for services/porterage, 20% max for meals. Alcohol not permitted unless dining with customer. Mileage reimbursed at CRA rates. Corporate cards are for business use only.",
+  "corporate_card_policy": "only_named_cardholder_may_use",
+  "policy_source": "Brim Business Expenses Policy"
+}
