@@ -359,10 +359,11 @@ export default function LandingPage() {
 
         <div className="relative text-center max-w-4xl px-6" style={{ zIndex: 2 }}>
           <BlurFade delay={0.0} duration={0.8}>
-            <h1 className="text-[clamp(2.75rem,7vw,6rem)] leading-[0.93] tracking-[-0.04em] text-zinc-50 mb-8"
+            <h1 className="text-[clamp(2.75rem,7vw,6rem)] leading-[0.95] tracking-[-0.04em] text-zinc-50 mb-6"
               style={{ fontFamily: "var(--font-display), Georgia, serif" }}>
               The Intelligence Layer
-              <span className="block" style={{ color: "rgba(255,255,255,0.22)" }}>
+              <br />
+              <span style={{ color: "rgba(255,255,255,0.22)" }}>
                 for Expense Management.
               </span>
             </h1>
@@ -394,23 +395,6 @@ export default function LandingPage() {
           </BlurFade>
         </div>
 
-        {/* Stats row — pill counters */}
-        <BlurFade delay={0.35} duration={0.8} className="relative z-10 mt-16 w-full max-w-3xl px-6">
-          <style>{`
-            @keyframes ray-spin { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-            @keyframes dot-pulse { 0%,100% { opacity:1; } 50% { opacity:0.4; } }
-          `}</style>
-          <div className="flex flex-wrap items-center justify-center gap-2.5">
-            {[
-              { target: 6, suffix: "mo", label: "Transaction Data" },
-              { target: 50, suffix: "+",  label: "Employees" },
-              { target: 8, suffix: "",    label: "Claude Tools" },
-              { target: 4, suffix: "",    label: "Core Features" },
-            ].map((s) => (
-              <DotStatCard key={s.label} target={s.target} suffix={s.suffix} label={s.label} />
-            ))}
-          </div>
-        </BlurFade>
       </section>
 
       {/* ── FEATURES ── */}

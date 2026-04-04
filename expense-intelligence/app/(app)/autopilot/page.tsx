@@ -60,21 +60,75 @@ function fmtDollar(n?: number) {
   return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 }
 
+// ── Module SVG Icons ──────────────────────────────────────────────────────────
+function IconClock({ color }: { color: string }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <circle cx="9" cy="9" r="7" stroke={color} strokeWidth="1.4" strokeOpacity="0.7"/>
+      <path d="M9 5v4l2.5 2.5" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+function IconAlert({ color }: { color: string }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M9 3L2.5 14.5h13L9 3z" stroke={color} strokeWidth="1.4" strokeLinejoin="round" strokeOpacity="0.7"/>
+      <path d="M9 8v3M9 12.5v.5" stroke={color} strokeWidth="1.4" strokeLinecap="round"/>
+    </svg>
+  );
+}
+function IconBarChart({ color }: { color: string }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <rect x="2.5" y="9" width="3" height="7" rx="0.8" fill={color} fillOpacity="0.5"/>
+      <rect x="7.5" y="6" width="3" height="10" rx="0.8" fill={color} fillOpacity="0.7"/>
+      <rect x="12.5" y="3" width="3" height="13" rx="0.8" fill={color}/>
+    </svg>
+  );
+}
+function IconSearch({ color }: { color: string }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <circle cx="8" cy="8" r="5" stroke={color} strokeWidth="1.4" strokeOpacity="0.7"/>
+      <path d="M12 12l3.5 3.5" stroke={color} strokeWidth="1.4" strokeLinecap="round"/>
+    </svg>
+  );
+}
+function IconShield({ color }: { color: string }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M9 2L3 5v4c0 4 2.7 7.5 6 8.4C12.3 16.5 15 13 15 9V5L9 2z" stroke={color} strokeWidth="1.4" strokeLinejoin="round" strokeOpacity="0.7"/>
+      <path d="M6.5 9l2 2 3-3" stroke={color} strokeWidth="1.4" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+function IconLightbulb({ color }: { color: string }) {
+  return (
+    <svg width="18" height="18" viewBox="0 0 18 18" fill="none">
+      <path d="M9 2.5a5 5 0 0 1 2.5 9.3V13.5H6.5V11.8A5 5 0 0 1 9 2.5z" stroke={color} strokeWidth="1.4" strokeLinejoin="round" strokeOpacity="0.7"/>
+      <path d="M6.5 15.5h5M7.5 13.5h3" stroke={color} strokeWidth="1.4" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
 // ── Idle Scan Module Card ──────────────────────────────────────────────────────
-function ModuleCard({ icon, label, sub, color }: { icon: string; label: string; sub: string; color: string }) {
+function ModuleCard({ icon, label, sub }: { icon: React.ReactNode; label: string; sub: string }) {
   return (
     <div
-      className="flex flex-col gap-1.5 p-4 rounded-xl transition-all duration-300 hover:border-white/15 cursor-default"
+      className="flex flex-col gap-2 p-4 rounded-xl transition-all duration-300 hover:border-white/10 cursor-default"
       style={{
         background: "rgba(255,255,255,0.02)",
-        border: "1px solid rgba(255,255,255,0.07)",
+        border: "1px solid rgba(255,255,255,0.06)",
       }}
     >
-      <span className="text-xl">{icon}</span>
-      <span className="text-[11px] font-mono uppercase tracking-widest" style={{ color, opacity: 0.8 }}>
+      <div className="w-8 h-8 rounded-lg flex items-center justify-center"
+        style={{ background: "rgba(255,255,255,0.04)", border: "1px solid rgba(255,255,255,0.07)" }}>
+        {icon}
+      </div>
+      <span className="text-[11px] font-mono uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.55)" }}>
         {label}
       </span>
-      <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.35)" }}>
+      <span className="text-[10px]" style={{ color: "rgba(255,255,255,0.3)" }}>
         {sub}
       </span>
     </div>
@@ -321,7 +375,13 @@ export default function AutopilotPage() {
               setToolStatuses((prev) =>
                 prev.map((t) => ({ ...t, status: "done" as const }))
               );
-              if (!plan) setMode("briefing");
+              // plan state may not have updated yet — use a small delay
+              setTimeout(() => {
+                setPlan((currentPlan) => {
+                  if (!currentPlan) setMode("scanning"); // stay in scanning; show error below
+                  return currentPlan;
+                });
+              }, 200);
             } else if (event.type === "error") {
               setStreamText((prev) => prev + `\n\nError: ${event.error}`);
             }
@@ -445,12 +505,12 @@ export default function AutopilotPage() {
                 ANALYSIS MODULES
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
-                <ModuleCard icon="⏳" label="Pending Approvals" sub={idleStats ? `${idleStats.approvals} waiting` : "Loading…"} color={SKY} />
-                <ModuleCard icon="⚠️" label="Policy Violations" sub={idleStats ? `${idleStats.violations} open` : "Loading…"} color={ORANGE} />
-                <ModuleCard icon="📊" label="Budget Health" sub={idleStats ? `${idleStats.depts} departments` : "Loading…"} color={AMBER} />
-                <ModuleCard icon="🔍" label="Anomaly Detection" sub="fraud patterns" color={RED} />
-                <ModuleCard icon="🧾" label="Compliance Scan" sub="policy rules" color="#A78BFA" />
-                <ModuleCard icon="💡" label="Vendor Insights" sub="savings opps" color={GREEN} />
+                <ModuleCard icon={<IconClock color={SKY} />} label="Pending Approvals" sub={idleStats ? `${idleStats.approvals} waiting` : "Loading…"} />
+                <ModuleCard icon={<IconAlert color={ORANGE} />} label="Policy Violations" sub={idleStats ? `${idleStats.violations} open` : "Loading…"} />
+                <ModuleCard icon={<IconBarChart color={AMBER} />} label="Budget Health" sub={idleStats ? `${idleStats.depts} departments` : "Loading…"} />
+                <ModuleCard icon={<IconSearch color={RED} />} label="Anomaly Detection" sub="fraud & split charges" />
+                <ModuleCard icon={<IconShield color="#A78BFA" />} label="Compliance Scan" sub="policy validation" />
+                <ModuleCard icon={<IconLightbulb color={GREEN} />} label="Vendor Insights" sub="cost reduction opps" />
               </div>
             </div>
 
@@ -458,20 +518,19 @@ export default function AutopilotPage() {
             <div className="text-center">
               <button
                 onClick={startAnalysis}
-                className="inline-flex items-center gap-3 px-8 py-4 text-sm font-semibold transition-all duration-300 hover:opacity-90 active:scale-[0.98] cursor-pointer"
+                className="inline-flex items-center gap-2.5 px-8 py-4 text-sm font-semibold transition-all duration-300 hover:opacity-90 active:scale-[0.98] cursor-pointer"
                 style={{
-                  background: `linear-gradient(135deg, ${SKY}, rgba(56,189,248,0.7))`,
+                  background: `linear-gradient(135deg, ${SKY}, rgba(56,189,248,0.75))`,
                   color: "#000",
                   borderRadius: "14px",
                   boxShadow: `0 0 40px rgba(56,189,248,0.2), 0 4px 16px rgba(0,0,0,0.4)`,
                 }}
               >
-                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                  <path d="M8 1v7m0 0l3-3M8 8L5 5" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" />
-                  <circle cx="8" cy="8" r="6.5" stroke="currentColor" strokeWidth="1" strokeOpacity="0.5" />
-                </svg>
                 Begin Analysis
-                <span className="text-[10px] font-mono opacity-60">~30s</span>
+                <svg width="14" height="14" viewBox="0 0 14 14" fill="none">
+                  <path d="M3 7h8M8 4l3 3-3 3" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" />
+                </svg>
+                <span className="text-[10px] font-mono opacity-60 ml-0.5">~30s</span>
               </button>
               <p className="text-[10px] font-mono mt-3" style={{ color: "rgba(255,255,255,0.2)" }}>
                 Uses Claude API with multi-step tool calling

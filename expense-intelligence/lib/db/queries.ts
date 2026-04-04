@@ -629,25 +629,14 @@ export function getTransactionsForReport(
       .all({ employee_id, event_tag }) as Transaction[];
   }
 
-  // No event_tag: get last 72h of travel/conference transactions
-  const cutoff = new Date();
-  cutoff.setHours(cutoff.getHours() - 72);
-  const cutoffStr = cutoff.toISOString().split('T')[0];
-
+  // No event_tag: return all transactions for the employee
   return db
     .prepare(
       `SELECT * FROM transactions
        WHERE employee_id = @employee_id
-         AND date >= @cutoff
-         AND (
-           LOWER(category) IN ('flights', 'hotels', 'transportation', 'travel',
-                                'conference', 'conference_registration')
-           OR LOWER(category) LIKE '%travel%'
-           OR LOWER(category) LIKE '%conference%'
-         )
        ORDER BY date ASC`
     )
-    .all({ employee_id, cutoff: cutoffStr }) as Transaction[];
+    .all({ employee_id }) as Transaction[];
 }
 
 // ---------------------------------------------------------------------------

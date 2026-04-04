@@ -138,7 +138,8 @@ export function runAgentStream(
   messages: Anthropic.Messages.MessageParam[],
   systemPrompt: string = SYSTEM_PROMPT,
   tools: Anthropic.Messages.Tool[] = EXPENSE_TOOLS,
-  toolHandler: (name: string, input: Record<string, unknown>) => unknown = handleToolCall
+  toolHandler: (name: string, input: Record<string, unknown>) => unknown = handleToolCall,
+  maxIterations: number = MAX_ITERATIONS
 ): ReadableStream<Uint8Array> {
   const encoder = new TextEncoder();
 
@@ -153,14 +154,14 @@ export function runAgentStream(
         let currentMessages = [...messages];
         let iteration = 0;
 
-        while (iteration < MAX_ITERATIONS) {
+        while (iteration < maxIterations) {
           iteration++;
 
           const { completedToolUseBlocks, finalMessage } = await runOneIteration(
             client,
             {
               model: MODEL,
-              max_tokens: 8192,
+              max_tokens: 4096,
               system: systemPrompt,
               tools,
               messages: currentMessages,

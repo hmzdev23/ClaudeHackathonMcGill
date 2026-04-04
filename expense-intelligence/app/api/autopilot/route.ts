@@ -12,12 +12,13 @@ export async function POST() {
         {
           role: 'user',
           content:
-            'Run a full analysis of all expense data and produce an action plan. Follow your workflow: check KPIs, pending approvals, violations, anomalies, and budgets. Then output_action_plan with your complete findings.',
+            'Run the full advisory analysis now. Call tools in this exact order: (1) get_dashboard_kpis, (2) get_pending_approvals, (3) get_violations, (4) detect_anomalies, (5) get_budget_status. After you have called ALL five tools and analyzed the results, you MUST call output_action_plan as your final action. Do not stop until you have called output_action_plan.',
         },
       ],
       AUTOPILOT_SYSTEM_PROMPT,
       AUTOPILOT_TOOLS,
-      handleAutopilotToolCall
+      handleAutopilotToolCall,
+      12  // higher iteration limit for multi-tool autopilot workflow
     );
 
     return new Response(stream, {
