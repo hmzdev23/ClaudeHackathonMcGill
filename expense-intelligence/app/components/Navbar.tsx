@@ -36,7 +36,7 @@ function RefreshIcon({ spinning }: { spinning: boolean }) {
 const MODEL_PREF_KEY = "ai-model-pref";
 type ModelPref = 'primary' | 'groq' | 'openrouter';
 const MODEL_CYCLE: ModelPref[] = ['primary', 'groq', 'openrouter'];
-const MODEL_LABELS: Record<ModelPref, string> = { primary: 'SONNET', groq: 'GROQ', openrouter: 'QWEN' };
+const MODEL_LABELS: Record<ModelPref, string> = { primary: 'SONNET', groq: 'GROQ', openrouter: 'DEEPSEEK' };
 const MODEL_COLORS: Record<ModelPref, string> = { primary: '#38BDF8', groq: '#A78BFA', openrouter: '#34D399' };
 
 export function Navbar() {

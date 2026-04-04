@@ -5,7 +5,8 @@ import { BGPattern } from "@/components/ui/bg-pattern";
 
 const BLUE = "#38BDF8";
 
-function fmtMoney(n: number) {
+function fmtMoney(n: number | undefined | null) {
+  if (n == null || isNaN(n)) return "$0";
   if (n >= 1_000_000) return `$${(n / 1_000_000).toFixed(1)}M`;
   if (n >= 1000) return `$${(n / 1000).toFixed(1)}k`;
   return `$${n.toFixed(0)}`;
@@ -302,7 +303,7 @@ export default function InsightsPage() {
                             {fmtMoney(row.spent)}
                             <span className="text-sm ml-1" style={{ opacity: 0.5 }}>/ {fmtMoney(row.allocated)}</span>
                           </span>
-                          <span className="mono-label" style={{ opacity: 0.4 }}>{row.percent_used.toFixed(0)}% used</span>
+                          <span className="mono-label" style={{ opacity: 0.4 }}>{(row.percent_used ?? 0).toFixed(0)}% used</span>
                         </div>
                       </div>
 

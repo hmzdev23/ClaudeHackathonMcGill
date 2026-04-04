@@ -4,7 +4,7 @@ import { handleToolCall } from './tool-handlers';
 import { EXPENSE_TOOLS } from './tools';
 import { SYSTEM_PROMPT } from './prompts';
 
-export const OPENROUTER_MODEL = 'minimax/minimax-m2.5:free';
+export const OPENROUTER_MODEL = 'deepseek/deepseek-chat-v3-0324:free';
 const OPENROUTER_BASE = 'https://openrouter.ai/api/v1/chat/completions';
 
 const MAX_ITERATIONS = 8;
@@ -62,6 +62,8 @@ async function streamOnce(
     headers: {
       Authorization: `Bearer ${getApiKey()}`,
       'Content-Type': 'application/json',
+      'HTTP-Referer': 'https://lucid-expense.app',
+      'X-Title': 'Lucid',
     },
     body: JSON.stringify({
       model: OPENROUTER_MODEL,

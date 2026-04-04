@@ -44,12 +44,12 @@ export function remapFleetCategories(db: Database) {
   // 2. Tires & Parts
   run('fleet_tires_parts', [
     'MNA*MICHELIN%', 'BB OF %', 'BAUER BUILT%', 'WW TIRE%', 'FTN TIRE%',
-    'KAL-TIRE%', 'LOVE''S TIRE CARE%', 'GOODYEAR COMMERCIAL%', 'NAPA AUTO%',
-    'O''REILLY%', 'CHROME WORLD%', 'PART STOP%', 'TRACTOR SUPPLY%',
+    'KAL-TIRE%', "LOVE''S TIRE CARE%", 'GOODYEAR COMMERCIAL%', 'NAPA AUTO%',
+    "O''REILLY%", 'CHROME WORLD%', 'PART STOP%', 'TRACTOR SUPPLY%',
     'TRACTOR-SUPPLY%', 'BUMPER TO BUMPER%', 'FORT GARRY%', 'RED FOX HEAVY%',
     '4 STATE TRUCKS%', 'CROPAC EQUIPMENT%', 'GALLES FILTER%', 'GLASVAN TRAILERS%',
     'KINGPIN TRAILERS%', 'LARSON TRUCK SALES%', 'TRUCK PRO %', 'VIKING CB RADIO%',
-    'D H TIRE%', 'MTR TIRE SERVICES%', 'BLUE BEACON%', 'LOVE''S TIRE%',
+    'D H TIRE%', 'MTR TIRE SERVICES%', 'BLUE BEACON%', "LOVE''S TIRE%",
   ]);
 
   // 3. Maintenance, Repairs & Washes
@@ -70,7 +70,7 @@ export function remapFleetCategories(db: Database) {
 
   // 4. Fuel — all remaining truck stops & gas stations
   run('fleet_fuel', [
-    'FLYING J%', 'PILOT %', 'LOVE''S #%', 'PETRO #%', 'PETRO-%',
+    'FLYING J%', 'PILOT %', "LOVE''S #%", 'PETRO #%', 'PETRO-%',
     'TA #%', 'TA %', 'CENEX%', 'SHELL%', 'PHILLIPS 66%', 'EXXON%',
     'CONOCO%', 'CHEVRON%', 'ONE9 %', 'ROAD RANGER%', 'KWIK TRIP%',
     'CASEYS%', 'ALLSUPS%', 'MAVERIK%', 'SPEEDWAY%', 'QT %',
@@ -81,7 +81,7 @@ export function remapFleetCategories(db: Database) {
     'PETRO FLORENCE%', 'PETRO REMINGTON%', 'PETRO WELLS%', 'PETRO FUEL%',
     'PETRO GLADE%', 'PETRO RAPHINE%', 'PETRO-66%', 'LIVING SKY DIESEL%',
     'NORTH 60 PETRO%', 'NORTHDALE OIL%', 'VITUS ENERGY%', 'FRASERS OIL%',
-    'MR FUEL%', 'CPC SCP%', 'STINKER%', 'RUTTER''S%', 'ONCUE EXPRESS%',
+    'MR FUEL%', 'CPC SCP%', 'STINKER%', "RUTTER''S%", 'ONCUE EXPRESS%',
     'SANDHILL OIL%', 'GRASSWOOD ESSO%', 'CN TRAVEL PLAZA%', 'DUBOIS TRAVEL STOP%',
     'BASSANO ESSO%', 'CLEARWATER TRAVEL%', 'WESTERN DAKOTA ENERGY%',
     'YESWAY%', 'PUMP & PANTRY%', 'SCHATZ CROSSROADS%', 'ROSEBUD CASINO FUEL%',
@@ -95,7 +95,7 @@ export function remapFleetCategories(db: Database) {
     'SHORTYS ONE ST%', 'SANDSTONE GAS%', 'MOOSOMIN C-STORE%',
     'TAYLOR QUIK PIK%', 'CHARLIES COUNTRY%', 'CROCKETT ENTERPRISES%',
     'PAYSIMPLY/ALBERTA FUEL%', 'GRAND ISLAND BOSS%', 'KIMBERS%',
-    'JOHNNY K''S%', 'WHOA & GO%', 'TROTTERS WHOA%', 'BANNOCK PEAK%',
+    "JOHNNY K''S%", 'WHOA & GO%', 'TROTTERS WHOA%', 'BANNOCK PEAK%',
     'STATION 49%', 'SUPER DUPER%', 'A30 EXPRESS%', 'LEROY SHELL%',
     'HUGHES PETROLEUM%', 'FGP40055%', 'LC COOP SHELLBROOK%',
     'LLOYDMINSTER HUSKY%', 'CLAIRMONT HUSKY%', 'HUSKY TRAVEL%',

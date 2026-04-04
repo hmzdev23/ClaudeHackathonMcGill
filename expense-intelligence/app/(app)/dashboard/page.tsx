@@ -222,6 +222,17 @@ export default function DashboardPage() {
 
   return (
     <div className="p-8 lg:p-12 max-w-[100rem] mx-auto relative" style={{ background: "var(--bg)" }}>
+      {/* Aurora background — subtle animated color wash behind all content */}
+      <div className="pointer-events-none fixed inset-0 overflow-hidden" style={{ opacity: 0.18, zIndex: 0 }}>
+        <div
+          className="absolute -inset-[12%] blur-3xl animate-aurora"
+          style={{
+            backgroundImage: "radial-gradient(circle at 15% 25%,rgba(245,158,11,0.28),transparent 40%),radial-gradient(circle at 80% 75%,rgba(6,182,212,0.22),transparent 40%),radial-gradient(circle at 50% 5%,rgba(139,92,246,0.18),transparent 45%),radial-gradient(circle at 65% 50%,rgba(16,185,129,0.12),transparent 35%)",
+            maskImage: "radial-gradient(ellipse at top, black 40%, transparent 80%)",
+            WebkitMaskImage: "radial-gradient(ellipse at top, black 40%, transparent 80%)",
+          }}
+        />
+      </div>
       <BGPattern variant="grid" mask="fade-three-sides" size={32} fill="rgba(255,255,255,0.025)" />
 
       {/* Header */}
