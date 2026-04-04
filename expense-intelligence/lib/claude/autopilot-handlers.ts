@@ -3,7 +3,7 @@ import { handleToolCall } from './tool-handlers';
 
 /**
  * Extended tool handler for the autopilot agent.
- * Handles autopilot-only tools; delegates all others to the standard handler.
+ * Returns trimmed payloads to stay within the 10k tokens/min rate limit.
  */
 export function handleAutopilotToolCall(
   toolName: string,
@@ -14,40 +14,54 @@ export function handleAutopilotToolCall(
       const db = getDb();
       const approvals = db
         .prepare(
-          `SELECT a.id, a.transaction_id, a.employee_id, a.amount, a.merchant,
-                  a.description, a.ai_recommendation, a.ai_reasoning,
-                  a.status, a.created_at,
-                  e.name as employee_name, e.department, e.role
+          `SELECT a.id, a.employee_id, a.amount, a.merchant, a.description,
+                  a.ai_recommendation, a.status, a.created_at,
+                  e.name as employee_name, e.department
            FROM approvals a
            LEFT JOIN employees e ON e.id = a.employee_id
            WHERE a.status = 'pending'
-           ORDER BY a.amount DESC`
+           ORDER BY a.amount DESC
+           LIMIT 10`
         )
         .all() as Array<{
-        id: string;
-        transaction_id: string;
-        employee_id: string;
-        amount: number;
-        merchant: string;
-        description: string;
-        ai_recommendation: string;
-        ai_reasoning: string;
-        status: string;
-        created_at: string;
-        employee_name: string;
-        department: string;
-        role: string;
+        id: string; employee_id: string; amount: number; merchant: string;
+        description: string; ai_recommendation: string; status: string;
+        created_at: string; employee_name: string; department: string;
       }>;
 
-      return {
-        count: approvals.length,
-        pending_approvals: approvals,
-      };
+      return { count: approvals.length, pending_approvals: approvals };
     }
 
     case 'output_action_plan':
-      // Return with special key so the agent loop detects it and emits action_plan event
       return { _action_plan: input };
+
+    case 'detect_anomalies': {
+      // Limit each anomaly type to 5 records to reduce token usage
+      const result = handleToolCall(toolName, input) as Record<string, unknown>;
+      const trimmed: Record<string, unknown> = {};
+      for (const [key, val] of Object.entries(result)) {
+        if (Array.isArray(val)) {
+          trimmed[key] = val.slice(0, 5);
+        } else {
+          trimmed[key] = val;
+        }
+      }
+      return trimmed;
+    }
+
+    case 'get_violations': {
+      const result = handleToolCall(toolName, input) as { violations?: unknown[]; repeat_offenders?: unknown[] };
+      return {
+        violations: (result.violations || []).slice(0, 10),
+        repeat_offenders: (result.repeat_offenders || []).slice(0, 5),
+      };
+    }
+
+    case 'query_transactions': {
+      // Ensure there's always a limit to avoid huge payloads
+      const limitedInput = { limit: 20, ...input };
+      return handleToolCall(toolName, limitedInput);
+    }
 
     default:
       return handleToolCall(toolName, input);

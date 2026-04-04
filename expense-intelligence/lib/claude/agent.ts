@@ -26,7 +26,7 @@ export interface ActionPlan {
 }
 
 const MAX_ITERATIONS = 8;
-const STREAM_RETRIES = 4;
+const STREAM_RETRIES = 2; // reduced — SDK maxRetries is now 0
 
 function isOverloadedError(err: unknown): boolean {
   if (!(err instanceof Error)) return false;
@@ -37,6 +37,12 @@ function isOverloadedError(err: unknown): boolean {
     e.message.includes('529') ||
     e.message.includes('Overloaded')
   );
+}
+
+function isRateLimitError(err: unknown): boolean {
+  if (!(err instanceof Error)) return false;
+  const e = err as Error & { status?: number };
+  return e.status === 429 || e.message.includes('429') || e.message.includes('rate_limit');
 }
 
 function sleep(ms: number) {
@@ -117,8 +123,16 @@ async function runOneIteration(
       return { completedToolUseBlocks, finalMessage };
 
     } catch (err) {
+      if (isRateLimitError(err)) {
+        // Rate limit — wait 15s then retry once
+        if (attempt === 0) {
+          send({ type: 'text_delta', content: '\n\n*Rate limit reached — waiting 15 seconds before retrying…*\n\n' });
+          await sleep(15000);
+          continue;
+        }
+        throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+      }
       if (isOverloadedError(err) && attempt < STREAM_RETRIES) {
-        // Exponential backoff: 1s, 2s, 4s, 8s
         const delay = 1000 * Math.pow(2, attempt);
         send({ type: 'text_delta', content: attempt === 0 ? '\n\n*Claude is busy — retrying…*' : '' });
         await sleep(delay);

@@ -10,7 +10,8 @@ export function getClaudeClient(): Anthropic {
         'ANTHROPIC_API_KEY is not set. Add it to your .env.local file.'
       );
     }
-    client = new Anthropic({ apiKey, maxRetries: 4 });
+    // maxRetries:0 — we handle retries in the agent loop ourselves
+    client = new Anthropic({ apiKey, maxRetries: 0 });
   }
   return client;
 }

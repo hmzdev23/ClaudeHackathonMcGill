@@ -46,7 +46,8 @@ export function handleToolCall(
         {
           group_by: input.group_by as string | undefined,
           order_by: input.order_by as string | undefined,
-          limit: input.limit as number | undefined,
+          // Default cap to prevent blowing the 10k token/min rate limit
+          limit: (input.limit as number | undefined) ?? 30,
         }
       );
 
