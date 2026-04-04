@@ -37,7 +37,7 @@ const STEPS: TourStep[] = [
     id: "welcome",
     tag: "INITIALIZE",
     tagColor: SKY,
-    title: "Welcome to Expense Intelligence",
+    title: "Welcome to Lucid",
     description: "AI-powered expense management for SMBs. Claude handles what used to take your finance team hours — in seconds.",
     hint: "Start by clicking RELOAD_DATA in the top navbar to seed 6 months of real Brim card transactions.",
     route: "/dashboard",
@@ -91,8 +91,8 @@ const STEPS: TourStep[] = [
     tag: "FEATURE_03 — APPROVALS",
     tagColor: "#A78BFA",
     title: "AI Pre-Approval Workflow",
-    description: "Every pending expense gets an AI recommendation with confidence reasoning, employee spend history, and budget headroom. One-click decisions.",
-    hint: "Each card shows AI confidence and reasoning based on real employee data. Try approving or denying a pending expense.",
+    description: "Every pending expense gets an AI recommendation with confidence reasoning, card spend history, and budget headroom. One-click decisions.",
+    hint: "Each card shows AI confidence and reasoning based on real card data. Try approving or denying a pending expense.",
     route: "/approvals",
     required: true,
     icon: <HexIcon color="#A78BFA"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><rect x="3" y="3" width="12" height="12" rx="2" stroke="#A78BFA" strokeWidth="1.5"/><path d="M6 9l2.5 2.5 3.5-4" stroke="#A78BFA" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/></svg></HexIcon>,
@@ -102,8 +102,8 @@ const STEPS: TourStep[] = [
     tag: "FEATURE_04 — REPORTS",
     tagColor: "#34D399",
     title: "Automated Expense Reports",
-    description: "Select any employee. Claude groups their transactions by trip or project, writes an executive narrative, and adds policy annotations — in seconds.",
-    hint: "Pick an employee from the dropdown, click Generate Report. Claude writes a full narrative from their real Brim transaction data.",
+    description: "Select any card group. Claude groups their transactions by month, writes an executive narrative, and adds policy annotations — in seconds.",
+    hint: "Pick a card group from the dropdown, click Generate Report. Claude writes a full narrative from real Brim transaction data.",
     route: "/reports",
     required: true,
     icon: <HexIcon color="#34D399"><svg width="18" height="18" viewBox="0 0 18 18" fill="none"><path d="M5 2h8l3 3v11a1 1 0 01-1 1H3a1 1 0 01-1-1V3a1 1 0 011-1z" stroke="#34D399" strokeWidth="1.5"/><path d="M12 2v4h4M6 9h6M6 12h4" stroke="#34D399" strokeWidth="1.2" strokeLinecap="round"/></svg></HexIcon>,
@@ -168,7 +168,7 @@ function useTypewriter(text: string, speed = 18) {
 
 // ── Welcome screen (full-page immersive) ─────────────────────────────────────
 function WelcomeScreen({ onStart, onSkip }: { onStart: () => void; onSkip: () => void }) {
-  const line1 = useTypewriter("Expense Intelligence", 38);
+  const line1 = useTypewriter("Lucid", 38);
   const line2 = useTypewriter(line1.done ? "AI-powered finance for small businesses." : "", 22);
   const [showButtons, setShowButtons] = useState(false);
 

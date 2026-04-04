@@ -1,122 +1,98 @@
 import { getDb } from '@/lib/db';
-import {
-  getEmployeeProfile,
-  getBudgetStatus,
-  insertApproval,
-  type Transaction,
-} from '@/lib/db/queries';
+import { getEmployeeProfile, type Transaction } from '@/lib/db/queries';
 import { runAgentOnce } from '@/lib/claude/agent';
 
 export const dynamic = 'force-dynamic';
 
-const APPROVAL_SYSTEM_PROMPT = `You are an AI financial advisor helping approve or deny expense requests. Given an expense request with employee history and department budget context, provide: { "recommendation": "approve" or "deny", "reasoning": "2-3 sentence explanation" }. Be decisive and specific about which policy rule applies.`;
+const APPROVAL_SYSTEM_PROMPT = `You are an AI financial advisor for a corporate card program. Given a card expense with spend history, provide a JSON decision: { "recommendation": "approve" or "deny", "reasoning": "2-3 sentence explanation citing specific numbers" }. Be decisive and data-driven.`;
+
+interface ApprovalRow {
+  id: string;
+  transaction_id: string;
+  employee_id: string;
+  amount: number;
+  merchant: string;
+  description: string;
+  status: string;
+}
 
 export async function POST(req: Request) {
   try {
-    const { transaction_id } = await req.json();
+    // Accept either approval `id` or `transaction_id`
+    const body = await req.json();
+    const approvalId: string | undefined = body.id;
+    const txnId: string | undefined = body.transaction_id;
 
-    if (!transaction_id) {
-      return Response.json(
-        { error: 'transaction_id is required' },
-        { status: 400 }
-      );
+    if (!approvalId && !txnId) {
+      return Response.json({ error: 'id or transaction_id is required' }, { status: 400 });
     }
 
     const db = getDb();
 
-    // 1. Get the transaction by id
-    const transaction = db
-      .prepare('SELECT * FROM transactions WHERE id = ?')
-      .get(transaction_id) as Transaction | undefined;
+    // Resolve the approval record
+    const approval = approvalId
+      ? (db.prepare('SELECT * FROM approvals WHERE id = ?').get(approvalId) as ApprovalRow | undefined)
+      : (db.prepare('SELECT * FROM approvals WHERE transaction_id = ? ORDER BY created_at DESC LIMIT 1').get(txnId) as ApprovalRow | undefined);
 
-    if (!transaction) {
-      return Response.json(
-        { error: 'Transaction not found' },
-        { status: 404 }
-      );
+    if (!approval) {
+      return Response.json({ error: 'Approval not found' }, { status: 404 });
     }
 
-    // 2. Get employee profile (lookback 90 days)
+    // Get the transaction
+    const transaction = db
+      .prepare('SELECT * FROM transactions WHERE id = ?')
+      .get(approval.transaction_id) as Transaction | undefined;
+
+    if (!transaction) {
+      return Response.json({ error: 'Transaction not found' }, { status: 404 });
+    }
+
+    // Get card group spend profile
     const profile = getEmployeeProfile(transaction.employee_id, 90, true);
 
-    // 3. Get dept budget status
-    const budgetStatus = getBudgetStatus(transaction.department);
-
-    // 4. Build context prompt
-    const contextPrompt = `Review this expense for approval:
+    const contextPrompt = `Review this corporate card expense for approval:
 
 Transaction:
-- Amount: $${transaction.amount.toFixed(2)}
+- Amount: $${transaction.amount.toFixed(2)} CAD
 - Merchant: ${transaction.merchant}
 - Category: ${transaction.category}
 - Date: ${transaction.date}
 - Description: ${transaction.description}
-- Employee: ${transaction.employee_name} (${transaction.department})
+- Card Group: ${transaction.employee_name} (${transaction.department})
 
-Employee Profile:
-- Total spent (90 days): $${profile.total_spent.toFixed(2)}
+Card Group Spend Profile (last 90 days):
+- Total spent: $${profile.total_spent.toFixed(2)}
 - Average transaction: $${profile.avg_transaction.toFixed(2)}
-- Peer average: $${profile.peer_avg.toFixed(2)}
-- Violation count: ${profile.violation_count}
-- Top categories: ${JSON.stringify(profile.top_categories.slice(0, 3))}
+- Peer group average: $${profile.peer_avg.toFixed(2)}
+- Policy violations: ${profile.violation_count}
+- Top spend categories: ${profile.top_categories.slice(0, 3).map((c: { category: string; total: number }) => `${c.category} ($${c.total.toFixed(0)})`).join(', ')}
 
-Department Budget:
-${JSON.stringify(budgetStatus, null, 2)}
+No pre-set budget allocations in this dataset. Base your recommendation on transaction size relative to historical patterns, category norms, and general corporate card policy.
 
-Return your decision as JSON: { "recommendation": "approve" or "deny", "reasoning": "explanation" }`;
+Return JSON only: { "recommendation": "approve" or "deny", "reasoning": "explanation" }`;
 
-    // 5. Call Claude for recommendation
     let recommendation = 'approve';
-    let reasoning = 'Auto-approved: within policy limits.';
+    let reasoning = 'Within normal spend patterns for this card group.';
 
     try {
       const response = await runAgentOnce(contextPrompt, APPROVAL_SYSTEM_PROMPT);
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
+      const jsonMatch = response.match(/\{[\s\S]*?\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         recommendation = parsed.recommendation || recommendation;
         reasoning = parsed.reasoning || reasoning;
       }
     } catch {
-      // Use defaults if Claude call fails
+      // Fall through to defaults
     }
 
-    // 6. Build context packet
-    const contextPacket = JSON.stringify({
-      employee_profile: {
-        total_spent: profile.total_spent,
-        avg_transaction: profile.avg_transaction,
-        peer_avg: profile.peer_avg,
-        violation_count: profile.violation_count,
-      },
-      budget_status: budgetStatus,
-    });
+    // UPDATE the existing approval record (don't create a duplicate)
+    db.prepare(
+      `UPDATE approvals SET ai_recommendation = ?, ai_reasoning = ? WHERE id = ?`
+    ).run(recommendation, reasoning, approval.id);
 
-    // 7. Insert approval record
-    insertApproval({
-      transaction_id: transaction.id,
-      employee_id: transaction.employee_id,
-      amount: transaction.amount,
-      merchant: transaction.merchant,
-      description: transaction.description,
-      ai_recommendation: recommendation,
-      ai_reasoning: reasoning,
-      context_packet: contextPacket,
-      status: 'pending',
-      created_at: new Date().toISOString(),
-      resolved_at: null,
-    });
-
-    // 8. Update the transaction status to 'pending' if not already
-    db.prepare("UPDATE transactions SET status = 'pending' WHERE id = ? AND status != 'pending'")
-      .run(transaction_id);
-
-    // 9. Return the approval record
-    const approval = db
-      .prepare('SELECT * FROM approvals WHERE transaction_id = ? ORDER BY created_at DESC LIMIT 1')
-      .get(transaction_id);
-
-    return Response.json({ success: true, approval });
+    const updated = db.prepare('SELECT * FROM approvals WHERE id = ?').get(approval.id);
+    return Response.json({ success: true, approval: updated });
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : 'Approval generation failed' },

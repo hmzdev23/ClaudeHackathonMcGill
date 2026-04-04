@@ -135,6 +135,19 @@ export interface AnomalyFilters {
 // ---------------------------------------------------------------------------
 
 function getCurrentQuarter(): string {
+  // Use the most recent transaction date in the DB so the dashboard always
+  // shows real data regardless of when the demo is run.
+  try {
+    const db = getDb();
+    const row = db.prepare(`SELECT MAX(date) as latest FROM transactions`).get() as { latest: string | null };
+    if (row?.latest) {
+      const d = new Date(row.latest);
+      const quarter = Math.ceil((d.getMonth() + 1) / 3);
+      return `${d.getFullYear()}-Q${quarter}`;
+    }
+  } catch {
+    // fall through to real date
+  }
   const now = new Date();
   const quarter = Math.ceil((now.getMonth() + 1) / 3);
   return `${now.getFullYear()}-Q${quarter}`;

@@ -33,21 +33,9 @@ interface Violation {
   status: string;
 }
 
-interface BudgetStatus {
-  department: string;
-  category: string;
-  period?: string;
-  allocated: number;
-  spent: number;
-  remaining: number;
-  percent_used: number;
-  projected_end_of_period?: number;
-}
-
 interface DashboardData {
   kpis: DashboardKpis;
   recent_violations: Violation[];
-  budget_status: BudgetStatus[];
   monthly_spend: { month: string; total: number }[];
   category_spend: { category: string; total: number }[];
   department_spend: { department: string; total: number }[];
@@ -62,8 +50,22 @@ function fmtMonth(ym: string) {
   return new Date(parseInt(y), parseInt(m) - 1).toLocaleDateString("en-US", { month: "short" });
 }
 
+const CAT_LABELS: Record<string, string> = {
+  fleet_fuel:          "Fleet Fuel",
+  fleet_permits:       "Permits & Compliance",
+  fleet_tires_parts:   "Tires & Parts",
+  fleet_maintenance:   "Maintenance & Repairs",
+  equipment:           "Equipment",
+  office_supplies:     "Office Supplies",
+  software_saas:       "Software / SaaS",
+  hotels:              "Hotels",
+  training:            "Training",
+  meals:               "Meals",
+  transportation:      "Transportation",
+};
+
 function fmtCat(cat: string) {
-  return cat.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
+  return CAT_LABELS[cat] ?? cat.replace(/_/g, " ").replace(/\b\w/g, (c) => c.toUpperCase());
 }
 
 function fmtK(val: number) {
@@ -159,7 +161,7 @@ export default function DashboardPage() {
         <div className="text-center max-w-md px-8 relative z-10">
           <div className="mb-10 flex items-center justify-center gap-3">
             <div className="h-px w-8" style={{ background: BLUE, opacity: 0.4 }} />
-            <span className="mono-label" style={{ color: BLUE, opacity: 0.7 }}>BRIM_CHALLENGE // INITIALIZE</span>
+            <span className="mono-label" style={{ color: BLUE, opacity: 0.7 }}>INITIALIZE</span>
             <div className="h-px w-8" style={{ background: BLUE, opacity: 0.4 }} />
           </div>
           <h1 className="text-h2 mb-4" style={{ fontFamily: "var(--font-display), Georgia, serif", fontWeight: 400 }}>System ready.</h1>
@@ -211,16 +213,8 @@ export default function DashboardPage() {
       accentColor: data.kpis.open_violations > 0 ? "#ef4444" : "#22c55e",
       bgGlow: data.kpis.open_violations > 0 ? "rgba(239,68,68,0.05)" : "rgba(34,197,94,0.04)",
     },
-    {
-      tag: "OVER_BUDGET",
-      label: "Depts Over 80%",
-      value: data.kpis.departments_over_80pct.toString(),
-      accentColor: data.kpis.departments_over_80pct > 0 ? "#ef4444" : "#22c55e",
-      bgGlow: data.kpis.departments_over_80pct > 0 ? "rgba(239,68,68,0.05)" : "rgba(34,197,94,0.04)",
-    },
   ];
 
-  const totalBudgets = (data.budget_status || []).filter((b) => b.category === "total");
   const monthlyData = (data.monthly_spend || []).map((d) => ({ ...d, label: fmtMonth(d.month) }));
   const categoryData = (data.category_spend || []).map((d) => ({ ...d, label: fmtCat(d.category) }));
   const deptData = (data.department_spend || []);
@@ -235,7 +229,7 @@ export default function DashboardPage() {
         <div>
           <div className="flex items-center gap-3 mb-5">
             <div className="h-px w-6" style={{ background: BLUE, opacity: 0.5 }} />
-            <div className="editorial-badge" style={{ color: BLUE, opacity: 0.7 }}>BRIM_CHALLENGE // DASHBOARD</div>
+            <div className="editorial-badge" style={{ color: BLUE, opacity: 0.7 }}>OVERVIEW // DASHBOARD</div>
           </div>
           <h1 className="text-h1" style={{ fontFamily: "var(--font-display), Georgia, serif", fontWeight: 400 }}>
             Expense<br />
@@ -248,7 +242,7 @@ export default function DashboardPage() {
       </div>
 
       {/* KPI Grid */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-[1px] bg-[var(--borderline)] border border-[var(--borderline)] mb-8 animate-fade-up delay-1 relative z-10 rounded-2xl overflow-hidden" id="kpi-grid">
+      <div className="grid grid-cols-1 sm:grid-cols-3 lg:grid-cols-3 gap-[1px] bg-[var(--borderline)] border border-[var(--borderline)] mb-8 animate-fade-up delay-1 relative z-10 rounded-2xl overflow-hidden" id="kpi-grid">
         {kpiCards.map((kpi, i) => (
           <div
             key={i}
@@ -410,31 +404,33 @@ export default function DashboardPage() {
         </div>
       )}
 
-      {/* Budget + Violations */}
+      {/* Department Spend + Violations */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-[1px] bg-[var(--borderline)] border border-[var(--borderline)] animate-fade-up delay-3 relative z-10 rounded-2xl overflow-hidden mb-8">
-        {/* Department Budgets */}
-        <div className="p-8" style={{ background: "var(--surface)" }} id="budget-section">
+        {/* Department Spend */}
+        <div className="p-8" style={{ background: "var(--surface)" }} id="department-section">
           <div className="flex items-center justify-between mb-8">
-            <span className="mono-label" style={{ color: BLUE, opacity: 0.7 }}>BUDGET_UTILIZATION</span>
-            <span className="mono-label">{totalBudgets.length} DEPTS</span>
+            <span className="mono-label" style={{ color: BLUE, opacity: 0.7 }}>DEPARTMENT_SPEND</span>
+            <span className="mono-label">{(data.department_spend || []).length} GROUPS</span>
           </div>
           <div className="space-y-5">
-            {totalBudgets.map((b, i) => {
-              const pct = b.allocated > 0 ? (b.spent / b.allocated) * 100 : 0;
-              const color = pct >= 80 ? "#ef4444" : pct >= 60 ? "#f97316" : BLUE;
+            {(data.department_spend || []).map((d: { department: string; total: number }, i: number) => {
+              const max = Math.max(...(data.department_spend || []).map((x: { total: number }) => x.total), 1);
+              const pct = (d.total / max) * 100;
               return (
                 <div key={i}>
                   <div className="flex justify-between items-center mb-2">
-                    <span className="text-sm font-medium">{b.department}</span>
-                    <span className="mono-label">${b.spent.toLocaleString()} / ${b.allocated.toLocaleString()}</span>
+                    <span className="text-sm font-medium">{d.department}</span>
+                    <span className="mono-label">${d.total.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</span>
                   </div>
                   <div className="progress-bar">
-                    <div className="progress-fill" style={{ width: `${Math.min(pct, 100)}%`, background: color, boxShadow: pct >= 80 ? `0 0 8px ${color}` : undefined }} />
+                    <div className="progress-fill" style={{ width: `${pct}%`, background: BLUE }} />
                   </div>
-                  <p className="mono-label mt-1.5" style={{ color, opacity: 0.8 }}>{pct.toFixed(1)}%</p>
                 </div>
               );
             })}
+            {(data.department_spend || []).length === 0 && (
+              <p className="text-body">No transaction data available.</p>
+            )}
           </div>
         </div>
 
@@ -468,7 +464,7 @@ export default function DashboardPage() {
       <div className="animate-fade-up delay-3 relative z-10">
         <div className="flex items-center gap-4 mb-6">
           <div className="h-px w-6" style={{ background: BLUE, opacity: 0.4 }} />
-          <span className="mono-label" style={{ color: BLUE, opacity: 0.6 }}>BRIM_CHALLENGE // REQUIRED_FEATURES</span>
+          <span className="mono-label" style={{ color: BLUE, opacity: 0.6 }}>CORE_FEATURES</span>
         </div>
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-[1px] bg-[var(--borderline)] border border-[var(--borderline)] rounded-2xl overflow-hidden">
           {[
@@ -479,7 +475,7 @@ export default function DashboardPage() {
           ].map((f, i) => (
             <a key={i} href={f.href} className="block p-6 relative overflow-hidden group transition-all duration-300 hover:opacity-90" style={{ background: "var(--surface)" }}>
               <div className="absolute top-0 left-0 right-0 h-px" style={{ background: `linear-gradient(to right, ${f.color}50, transparent)` }} />
-              <span className="mono-label block mb-3" style={{ color: f.color, opacity: 0.7 }}>FEATURE_{f.num}</span>
+              <span className="mono-label block mb-3" style={{ color: f.color, opacity: 0.7 }}>{f.title.toUpperCase().replace(/ /g, "_")}</span>
               <h3 className="text-sm font-semibold mb-2">{f.title}</h3>
               <p className="text-xs leading-relaxed" style={{ color: "var(--text-sec)" }}>{f.desc}</p>
             </a>

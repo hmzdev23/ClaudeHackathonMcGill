@@ -67,9 +67,9 @@ const AUTOPILOT_ONLY_TOOLS: Tool[] = [
                   'Your reasoning for this recommendation in 1-2 sentences. Be specific — cite amounts, percentages, policy rules.',
               },
               target_id: {
-                type: 'string',
+                anyOf: [{ type: 'string' }, { type: 'null' }],
                 description:
-                  'The approval ID to act on. Required for approve_expense and deny_expense.',
+                  'The approval ID to act on. Required for approve_expense and deny_expense. Use null for informational actions.',
               },
               amount: { type: 'number', description: 'Dollar amount if applicable.' },
               employee: { type: 'string', description: 'Employee name if applicable.' },

@@ -11,8 +11,14 @@ function fmtMoney(n: number) {
   return `$${n.toFixed(0)}`;
 }
 
+const CAT_LABELS: Record<string, string> = {
+  fleet_fuel: "Fleet Fuel", fleet_permits: "Permits & Compliance",
+  fleet_tires_parts: "Tires & Parts", fleet_maintenance: "Maintenance & Repairs",
+  equipment: "Equipment", office_supplies: "Office Supplies",
+  software_saas: "Software / SaaS", hotels: "Hotels", training: "Training", meals: "Meals",
+};
 function fmtCat(s: string) {
-  return s.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+  return CAT_LABELS[s] ?? s.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
 }
 
 interface VendorRow {
@@ -104,7 +110,7 @@ export default function InsightsPage() {
       <div className="mb-10 animate-fade-up relative z-10">
         <div className="flex items-center gap-3 mb-5">
           <div className="h-px w-6" style={{ background: BLUE, opacity: 0.5 }} />
-          <span className="mono-label" style={{ color: BLUE, opacity: 0.7 }}>OPTIONAL // FEATURE_05</span>
+          <span className="mono-label" style={{ color: BLUE, opacity: 0.7 }}>OPTIONAL // INSIGHTS</span>
         </div>
         <h1 className="text-h2" style={{ fontFamily: "var(--font-display), Georgia, serif", fontWeight: 400 }}>
           Proactive<br /><span style={{ color: "var(--text-sec)", opacity: 0.3 }}>Insights.</span>

@@ -276,8 +276,8 @@ export default function LandingPage() {
           <div className="flex items-center justify-between">
             {/* Logo */}
             <Link href="/" className="flex items-center transition-opacity hover:opacity-80">
-              <span className="text-white text-[15px]" style={{ fontFamily: "var(--font-inter), Inter, sans-serif", fontWeight: 600 }}>
-                Expense Intelligence
+              <span className="text-white text-[22px]" style={{ fontFamily: "var(--font-inter), Inter, sans-serif", fontWeight: 700, letterSpacing: "-0.02em" }}>
+                Lucid
               </span>
             </Link>
 
@@ -304,10 +304,10 @@ export default function LandingPage() {
             <div className="flex items-center gap-2">
               {/* Log in — desktop */}
               <Link
-                href="/sign-in"
+                href="/"
                 className="hidden md:inline-flex items-center justify-center w-8 h-8 rounded-full transition-all duration-300 hover:bg-white/5 border"
                 style={{ borderColor: "rgba(255,255,255,0.05)", background: "rgba(255,255,255,0.02)" }}
-                title="Log in"
+                title="Home"
               >
                 <svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" className="w-4 h-4" style={{ color: "rgba(255,255,255,0.6)" }}>
                   <path d="M19 21v-2a4 4 0 0 0-4-4H9a4 4 0 0 0-4 4v2" />
@@ -317,8 +317,8 @@ export default function LandingPage() {
               {/* Launch Demo */}
               <Link
                 href="/dashboard"
-                className="rounded-full bg-white text-[#07090f] text-sm font-semibold px-5 py-2 transition-all hover:bg-zinc-100 active:scale-[0.97] hidden md:inline-flex"
-                style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.08), 0 4px 16px rgba(0,0,0,0.3)" }}
+                className="hidden md:flex rounded-full text-[#07090f] text-sm font-semibold px-5 py-2 transition-all hover:opacity-90 active:scale-[0.97]"
+                style={{ background: "#fff", whiteSpace: "nowrap" }}
               >
                 Launch Demo
               </Link>
@@ -378,9 +378,11 @@ export default function LandingPage() {
 
           <BlurFade delay={0.2} duration={0.7}>
             <div className="flex items-center justify-center gap-3">
-              <Link href="/dashboard"
-                className="rounded-full bg-white text-[#07090f] px-8 py-3 text-sm font-semibold flex items-center gap-2 transition-all hover:bg-zinc-100 active:scale-[0.97]"
-                style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.08), 0 8px 30px rgba(0,0,0,0.5)" }}>
+              <Link
+                href="/dashboard"
+                className="rounded-full text-[#07090f] px-8 py-3 text-sm font-semibold flex items-center gap-2 transition-all hover:opacity-90 active:scale-[0.97]"
+                style={{ background: "#fff" }}
+              >
                 Launch Demo
                 <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
                   <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -404,7 +406,7 @@ export default function LandingPage() {
             <div className="flex items-center gap-3 mb-4">
               <div className="h-px w-8" style={{ background: BLUE, opacity: 0.5 }} />
               <span className="text-xs font-mono uppercase tracking-widest" style={{ color: BLUE, opacity: 0.7 }}>
-                Brim Challenge · Required Features
+                Core Capabilities
               </span>
             </div>
             <p className="text-3xl font-normal tracking-tight text-zinc-100"
@@ -436,7 +438,6 @@ export default function LandingPage() {
                       </div>
                       {/* Bottom tag */}
                       <div className="mt-4 flex items-center gap-1.5">
-                        <span className="text-[9px] font-mono uppercase tracking-widest" style={{ color: BLUE, opacity: 0.55 }}>FEATURE_{f.num}</span>
                         <svg className="w-3 h-3 ml-auto opacity-0 group-hover:opacity-100 transition-opacity" style={{ color: BLUE }} fill="none" viewBox="0 0 24 24" stroke="currentColor">
                           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
                         </svg>
@@ -657,6 +658,63 @@ export default function LandingPage() {
         </div>
       </section>
 
+      {/* ── ETHICAL ALIGNMENT ── */}
+      <section className="relative py-28 overflow-hidden border-t" style={{ borderColor: "rgba(255,255,255,0.04)" }}>
+        <div className="absolute inset-0 pointer-events-none" style={{ backgroundImage: "radial-gradient(rgba(255,255,255,0.03) 1px, transparent 1px)", backgroundSize: "28px 28px" }} />
+        <BlurFade delay={0} duration={0.7} inView className="mx-auto max-w-5xl px-6 relative z-10">
+          <div className="flex items-center gap-3 mb-3">
+            <div className="h-px w-6" style={{ background: BLUE, opacity: 0.5 }} />
+            <span className="text-xs font-mono tracking-widest" style={{ color: BLUE, opacity: 0.7 }}>ETHICAL_DESIGN</span>
+          </div>
+          <h2 className="text-3xl font-normal tracking-tight text-zinc-100 mb-4"
+            style={{ fontFamily: "var(--font-display), Georgia, serif" }}>
+            AI that assists.<br />
+            <span style={{ color: "rgba(255,255,255,0.2)" }}>Humans that decide.</span>
+          </h2>
+          <p className="text-sm text-zinc-500 mb-12 max-w-xl leading-relaxed">
+            We thought seriously about what can go wrong when AI touches financial decisions.
+            Here&apos;s what we built to address it.
+          </p>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+            {[
+              {
+                tag: "HUMAN IN THE LOOP",
+                title: "AI recommends. You approve.",
+                body: "Every AI flag, every approval suggestion, every anomaly is a prompt for human review — not an automated action. No expense is approved or denied without a person in the loop. The AI reduces cognitive load; it does not replace judgment.",
+              },
+              {
+                tag: "KNOWN LIMITATIONS",
+                title: "We know what this doesn't do well.",
+                body: "The policy engine is calibrated to Canadian/North American norms — tipping percentages, alcohol policies, and per-diem limits reflect that context. Companies operating across different cultural norms should audit and adapt the policy rules before relying on AI compliance flags.",
+              },
+              {
+                tag: "WHO GETS EXCLUDED",
+                title: "Not everyone has equal access.",
+                body: "This tool assumes a modern browser, reliable internet, and English literacy. Employees who are less tech-comfortable, non-English speakers, or working in low-connectivity environments are disadvantaged. Any rollout should include accessible alternatives and plain-language explanations of AI decisions.",
+              },
+              {
+                tag: "EXPLAINABILITY",
+                title: "Every decision is explained.",
+                body: "The AI shows its reasoning on every recommendation — which policy rule was triggered, what spend history informed the decision, and what confidence level applies. Employees can see exactly why a flag was raised and dispute it with their manager. Opacity in financial AI is not acceptable.",
+              },
+            ].map((item, i) => (
+              <BlurFade key={i} delay={i * 0.08} duration={0.6} inView>
+                <div className="relative rounded-2xl border p-px h-full" style={{ borderColor: "rgba(255,255,255,0.08)" }}>
+                  <GlowingEffect spread={25} glow={false} disabled={false} proximity={0} inactiveZone={0.4} borderWidth={2} />
+                  <div className="relative rounded-[calc(1rem-1px)] p-6 h-full min-h-[160px] flex flex-col"
+                    style={{ background: "#10121a" }}>
+                    <span className="text-[10px] font-mono tracking-widest mb-3 block" style={{ color: BLUE, opacity: 0.7 }}>{item.tag}</span>
+                    <h3 className="text-sm font-semibold text-zinc-200 mb-2">{item.title}</h3>
+                    <p className="text-xs text-zinc-500 leading-relaxed">{item.body}</p>
+                  </div>
+                </div>
+              </BlurFade>
+            ))}
+          </div>
+        </BlurFade>
+      </section>
+
       {/* ── FOOTER / CTA ── */}
       <footer className="relative pt-28 pb-16 overflow-hidden border-t"
         style={{ background: "#05060c", borderColor: "rgba(255,255,255,0.04)" }}>
@@ -664,23 +722,20 @@ export default function LandingPage() {
           style={{ background: `radial-gradient(ellipse, ${BLUE}10, transparent 70%)`, filter: "blur(60px)" }} />
 
         <BlurFade delay={0} duration={0.8} inView className="mx-auto max-w-3xl px-6 text-center relative z-10">
-          <div className="w-14 h-14 rounded-2xl mx-auto flex items-center justify-center mb-8"
-            style={{ background: BLUE_DIM, border: `1px solid rgba(56,189,248,0.2)` }}>
-            <div className="w-1.5 h-7 rounded-full" style={{ background: BLUE, boxShadow: `0 0 14px ${BLUE}` }} />
-          </div>
-
           <h2 className="text-4xl font-normal tracking-tight text-zinc-100 mb-6"
             style={{ fontFamily: "var(--font-display), Georgia, serif" }}>
             Initialize your intelligence layer.
           </h2>
           <p className="text-sm text-zinc-500 max-w-md mx-auto mb-10 leading-relaxed">
-            Built for the Claude Builders Hackathon at McGill. Brim Financial Sub-Challenge.
+            Built for the Claude Builders Hackathon at McGill.
             Multi-step reasoning. Agentic workflows. Zero operational overhead.
           </p>
 
-          <Link href="/dashboard"
-            className="inline-flex items-center gap-2 rounded-full bg-white text-[#07090f] px-8 py-3 text-sm font-semibold transition-all hover:bg-zinc-100 active:scale-[0.97]"
-            style={{ boxShadow: "0 0 0 1px rgba(255,255,255,0.08), 0 8px 30px rgba(0,0,0,0.5)" }}>
+          <Link
+            href="/dashboard"
+            className="inline-flex items-center gap-2 rounded-full text-[#07090f] px-8 py-3 text-sm font-semibold transition-all hover:opacity-90 active:scale-[0.97] mx-auto"
+            style={{ background: "#fff" }}
+          >
             Launch Demo
             <svg className="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 7l5 5m0 0l-5 5m5-5H6" />
@@ -694,7 +749,7 @@ export default function LandingPage() {
             <div className="w-1.5 h-1.5 rounded-full" style={{ background: "#22c55e", boxShadow: "0 0 6px #22c55e" }} />
             All systems operational
           </div>
-          <span className="text-xs text-zinc-700">© 2026 Expense Intelligence · McGill Hackathon</span>
+          <span className="text-xs text-zinc-700">© 2026 Lucid · McGill Hackathon</span>
         </div>
       </footer>
     </div>

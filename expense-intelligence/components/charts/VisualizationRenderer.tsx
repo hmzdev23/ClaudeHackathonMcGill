@@ -161,7 +161,9 @@ export function VisualizationRenderer({ spec }: Props) {
               cx="50%"
               cy="50%"
               outerRadius={100}
-              label={({ name, value }) => `${name}: ${formatValue(value)}`}
+              label={({ cx: pcx, x, y, name, value }: { cx: number; x: number; y: number; name: string; value: number }) => (
+                <text x={x} y={y} fill="#fff" textAnchor={x > pcx ? "start" : "end"} dominantBaseline="central" fontSize={10} fontFamily="var(--font-mono)">{`${name}: ${formatValue(value)}`}</text>
+              )}
             >
               {(data as Record<string, unknown>[]).map((_, index) => (
                 <Cell

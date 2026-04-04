@@ -13,8 +13,7 @@ const navItems: { href: string; label: string; special?: boolean }[] = [
   { href: "/query",      label: "AI Query"    },
   { href: "/compliance", label: "Compliance"  },
   { href: "/approvals",  label: "Approvals"   },
-  { href: "/anomalies",  label: "Anomalies"   },
-  { href: "/budgets",    label: "Budgets"     },
+  { href: "/forecast",   label: "Forecast"    },
   { href: "/reports",    label: "Reports"     },
   { href: "/insights",   label: "Insights"    },
 ];
@@ -34,12 +33,32 @@ function RefreshIcon({ spinning }: { spinning: boolean }) {
   );
 }
 
+const MODEL_PREF_KEY = "ai-model-pref";
+type ModelPref = 'primary' | 'groq' | 'openrouter';
+const MODEL_CYCLE: ModelPref[] = ['primary', 'groq', 'openrouter'];
+const MODEL_LABELS: Record<ModelPref, string> = { primary: 'SONNET', groq: 'GROQ', openrouter: 'QWEN' };
+const MODEL_COLORS: Record<ModelPref, string> = { primary: '#38BDF8', groq: '#A78BFA', openrouter: '#34D399' };
+
 export function Navbar() {
   const pathname = usePathname();
   const router = useRouter();
   const [mobileOpen, setMobileOpen] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [seedDone, setSeedDone] = useState(false);
+  const [model, setModel] = useState<ModelPref>('primary');
+
+  useEffect(() => {
+    try {
+      const v = localStorage.getItem(MODEL_PREF_KEY) as ModelPref | null;
+      if (v && MODEL_CYCLE.includes(v)) setModel(v);
+    } catch {}
+  }, []);
+
+  function toggleModel() {
+    const next = MODEL_CYCLE[(MODEL_CYCLE.indexOf(model) + 1) % MODEL_CYCLE.length];
+    setModel(next);
+    try { localStorage.setItem(MODEL_PREF_KEY, next); } catch {}
+  }
 
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
@@ -84,13 +103,7 @@ export function Navbar() {
         {/* Logo */}
         <Link href="/dashboard" className="flex items-center gap-2.5 transition-opacity hover:opacity-80 flex-shrink-0 mr-4">
           <span className="text-white text-[15px] tracking-tight" style={{ fontFamily: "var(--font-inter), Inter, sans-serif", fontWeight: 600 }}>
-            Expense Intelligence
-          </span>
-          <span
-            className="hidden sm:inline-flex items-center px-2 py-0.5 text-[9px] font-mono tracking-widest"
-            style={{ border: `1px solid rgba(56,189,248,0.25)`, color: BLUE, opacity: 0.7, borderRadius: "4px" }}
-          >
-            BRIM
+            Lucid
           </span>
         </Link>
 
@@ -136,6 +149,25 @@ export function Navbar() {
 
         {/* Right side */}
         <div className="flex items-center gap-2 flex-shrink-0 ml-4">
+          {/* Model toggle — cycles SONNET → GROQ → QWEN */}
+          <button
+            onClick={toggleModel}
+            title={`Using ${MODEL_LABELS[model]} — click to cycle model`}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono transition-all duration-200 rounded-lg cursor-pointer"
+            style={{
+              background: `${MODEL_COLORS[model]}18`,
+              border: `1px solid ${MODEL_COLORS[model]}4D`,
+              color: MODEL_COLORS[model],
+              letterSpacing: "0.04em",
+            }}
+          >
+            <span
+              className="w-1.5 h-1.5 rounded-full flex-shrink-0"
+              style={{ background: MODEL_COLORS[model], boxShadow: `0 0 5px ${MODEL_COLORS[model]}` }}
+            />
+            {MODEL_LABELS[model]}
+          </button>
+
           {/* Reload demo data */}
           <button
             onClick={handleSeed}
@@ -156,10 +188,15 @@ export function Navbar() {
           {/* Landing link */}
           <Link
             href="/"
-            className="text-[12px] transition-colors hidden xl:block px-2 py-1.5 rounded-lg hover:bg-white/5"
-            style={{ color: "rgba(255,255,255,0.25)" }}
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono transition-all duration-200 rounded-lg"
+            style={{
+              background: "rgba(255,255,255,0.04)",
+              border: "1px solid rgba(255,255,255,0.08)",
+              color: "rgba(255,255,255,0.35)",
+              letterSpacing: "0.04em",
+            }}
           >
-            ← Landing
+            ← HOME
           </Link>
 
           <UserButton appearance={{ elements: { avatarBox: "w-7 h-7" } }} />

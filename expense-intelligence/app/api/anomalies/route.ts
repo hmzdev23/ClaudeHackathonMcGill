@@ -14,8 +14,14 @@ export const dynamic = 'force-dynamic';
 
 export async function GET() {
   try {
+    const db = getDb();
     const anomalies = getAnomalies();
-    return Response.json({ anomalies });
+    // Attach employee name from employees table
+    const empNames: Record<string, string> = {};
+    (db.prepare('SELECT id, name FROM employees').all() as Array<{ id: string; name: string }>)
+      .forEach((e) => { empNames[e.id] = e.name; });
+    const enriched = anomalies.map((a) => ({ ...a, employee_name: empNames[a.employee_id] ?? a.employee_id }));
+    return Response.json({ anomalies: enriched });
   } catch (error) {
     return Response.json(
       { error: error instanceof Error ? error.message : 'Failed to load anomalies' },

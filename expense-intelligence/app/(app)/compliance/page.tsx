@@ -3,12 +3,14 @@
 import { useState } from "react";
 import { BGPattern } from "@/components/ui/bg-pattern";
 import { SelectDropdown } from "@/components/ui/select-dropdown";
+import { getUseAltModel } from "@/lib/model-pref";
 
 interface ComplianceResult {
   compliant: boolean;
   requires_approval: boolean;
   issues: Array<{ rule: string; severity: string; detail: string }>;
   policy_summary: { approval_threshold: number; applied_limit: number | null };
+  ai_analysis?: string;
 }
 
 export default function CompliancePage() {
@@ -27,7 +29,7 @@ export default function CompliancePage() {
       const res = await fetch("/api/compliance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: parseFloat(amount), merchant, category, attendee_count: parseInt(attendeeCount) || 1 }),
+        body: JSON.stringify({ amount: parseFloat(amount), merchant, category, attendee_count: parseInt(attendeeCount) || 1, use_alt_model: getUseAltModel() }),
       });
       setResult(await res.json());
     } catch {
@@ -57,13 +59,23 @@ export default function CompliancePage() {
       <div className="mb-12 stagger-children relative z-10">
         <div className="flex items-center gap-3 mb-5">
           <div className="h-px w-6" style={{ background: "var(--accent-cyan)", opacity: 0.5 }} />
-          <div className="mono-label" style={{ color: "var(--accent-cyan)", opacity: 0.7 }}>BRIM_CHALLENGE // FEATURE_02</div>
+          <div className="mono-label" style={{ color: "var(--accent-cyan)", opacity: 0.7 }}>COMPLIANCE_ENGINE</div>
         </div>
         <h1 className="text-h2" style={{ fontFamily: "var(--font-display), Georgia, serif", fontWeight: 400 }}>
           Policy<br /><span style={{ color: "var(--text-sec)", opacity: 0.3 }}>Compliance.</span>
         </h1>
         <p className="text-body mt-4 max-w-lg">
           AI understands context — a $200 team dinner is different from a $200 solo dinner. Flags violations and ranks by severity.
+        </p>
+      </div>
+
+      {/* Advisory notice */}
+      <div className="mb-6 px-4 py-3 flex items-center gap-3 relative z-10 animate-fade-up"
+        style={{ background: "rgba(56,189,248,0.04)", border: "1px solid rgba(56,189,248,0.1)", borderRadius: 8 }}>
+        <div className="w-1 self-stretch rounded-full flex-shrink-0" style={{ background: "var(--accent-primary)", opacity: 0.5 }} />
+        <p className="text-xs" style={{ color: "var(--text-sec)", lineHeight: 1.6 }}>
+          <span style={{ color: "var(--text-main)", fontWeight: 500 }}>AI analysis may contain errors.</span>
+          {" "}Policy rules reflect Canadian/North American norms. Review all flags carefully — context the AI cannot see (verbal approvals, special circumstances) should be factored into your final decision.
         </p>
       </div>
 
@@ -169,7 +181,22 @@ export default function CompliancePage() {
             </div>
           )}
 
-          {result.policy_summary.applied_limit && (
+          {result.ai_analysis && (
+            <div className="px-8 pb-8 relative border-t" style={{ borderColor: "var(--borderline)" }}>
+              <div className="pt-6">
+                <div className="flex items-center gap-3 mb-4">
+                  <svg width="14" height="14" viewBox="0 0 14 14" fill="none" style={{ color: "var(--accent-cyan)", flexShrink: 0 }}>
+                    <circle cx="7" cy="7" r="2.5" fill="currentColor" />
+                    <circle cx="7" cy="7" r="6" stroke="currentColor" strokeWidth="1" opacity="0.4" />
+                  </svg>
+                  <span className="mono-label" style={{ color: "var(--accent-cyan)", opacity: 0.7 }}>CLAUDE_ANALYSIS</span>
+                </div>
+                <p className="text-sm leading-relaxed" style={{ color: "var(--text-sec)" }}>{result.ai_analysis}</p>
+              </div>
+            </div>
+          )}
+
+          {result.policy_summary.applied_limit && !result.ai_analysis && (
             <div className="px-8 pb-8 relative">
               <span className="mono-label" style={{ color: "var(--text-sec)" }}>
                 CATEGORY_LIMIT: ${result.policy_summary.applied_limit}

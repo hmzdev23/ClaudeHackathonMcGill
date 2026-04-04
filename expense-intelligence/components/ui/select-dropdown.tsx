@@ -57,15 +57,19 @@ export function SelectDropdown({
     return () => document.removeEventListener("mousedown", onOutside);
   }, []);
 
-  // Close on scroll anywhere
+  // Close on scroll outside the dropdown, or on resize
   useEffect(() => {
     if (!open) return;
-    const close = () => setOpen(false);
+    const close = (e: Event) => {
+      if (dropdownRef.current?.contains(e.target as Node)) return;
+      setOpen(false);
+    };
+    const closeResize = () => setOpen(false);
     window.addEventListener("scroll", close, true);
-    window.addEventListener("resize", close);
+    window.addEventListener("resize", closeResize);
     return () => {
       window.removeEventListener("scroll", close, true);
-      window.removeEventListener("resize", close);
+      window.removeEventListener("resize", closeResize);
     };
   }, [open]);
 

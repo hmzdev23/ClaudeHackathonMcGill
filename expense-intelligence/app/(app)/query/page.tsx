@@ -9,15 +9,33 @@ import {
 } from "@/components/ui/prompt-input";
 import { BGPattern } from "@/components/ui/bg-pattern";
 import { ArrowUpIcon, PanelLeft, Plus, X } from "lucide-react";
+import {
+  BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
+  XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
+} from "recharts";
+import { getUseAltModel } from "@/lib/model-pref";
 
 const BLUE = "#38BDF8";
 const SESSIONS_KEY = "expense-chat-sessions";
 const MAX_SESSIONS = 20;
 
+const VIZ_COLORS = ["#38BDF8", "#34D399", "#F59E0B", "#F87171", "#A78BFA", "#FB923C"];
+
+interface VisualizationSpec {
+  type: "bar" | "line" | "pie" | "table" | "number" | "gauge";
+  title: string;
+  data: Record<string, unknown>[];
+  x_key?: string;
+  y_key?: string;
+  color_key?: string;
+  format?: "currency" | "percent" | "number";
+}
+
 interface Message {
   role: "user" | "assistant";
   content: string;
   tool_calls?: Array<{ tool: string; input: Record<string, unknown> }>;
+  visualizations?: VisualizationSpec[];
 }
 
 interface ChatSession {
@@ -134,6 +152,164 @@ function MarkdownContent({ content }: { content: string }) {
   return <div>{elements}</div>;
 }
 
+// ── Visualization renderer ───────────────────────────────────────────────────
+
+function formatValue(value: unknown, format?: string): string {
+  const n = typeof value === "number" ? value : parseFloat(String(value));
+  if (isNaN(n)) return String(value ?? "");
+  if (format === "currency") return `$${n.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  if (format === "percent") return `${n.toFixed(1)}%`;
+  return n.toLocaleString();
+}
+
+function VisualizationCard({ spec }: { spec: VisualizationSpec }) {
+  const { type, title, data, x_key, y_key, format } = spec;
+
+  const keys = data.length > 0 ? Object.keys(data[0]) : [];
+  const xk = x_key || keys[0] || "name";
+  const yk = y_key || keys.find(k => k !== xk) || keys[1] || "value";
+
+  const cardStyle: React.CSSProperties = {
+    background: "var(--surface)",
+    border: "1px solid var(--borderline)",
+    borderRadius: 10,
+    padding: "1.25rem",
+    marginTop: "0.75rem",
+    overflow: "hidden",
+  };
+
+  const titleStyle: React.CSSProperties = {
+    fontSize: "0.72rem",
+    fontFamily: "var(--font-mono)",
+    letterSpacing: "0.07em",
+    textTransform: "uppercase",
+    color: BLUE,
+    opacity: 0.75,
+    marginBottom: "1rem",
+  };
+
+  if (type === "number") {
+    const val = data[0]?.[yk] ?? data[0]?.[xk];
+    return (
+      <div style={cardStyle}>
+        <p style={titleStyle}>{title}</p>
+        <p style={{ fontSize: "2.25rem", fontWeight: 700, color: "var(--text-main)", lineHeight: 1, fontFamily: "var(--font-display), Georgia, serif" }}>
+          {formatValue(val, format)}
+        </p>
+      </div>
+    );
+  }
+
+  if (type === "table") {
+    const cols = data.length > 0 ? Object.keys(data[0]) : [];
+    return (
+      <div style={cardStyle}>
+        <p style={titleStyle}>{title}</p>
+        <div style={{ overflowX: "auto" }}>
+          <table style={{ width: "100%", borderCollapse: "collapse", fontSize: "0.78rem" }}>
+            <thead>
+              <tr>
+                {cols.map(c => (
+                  <th key={c} style={{ padding: "0.4rem 0.6rem", textAlign: "left", color: "var(--text-sec)", fontFamily: "var(--font-mono)", fontSize: "0.65rem", textTransform: "uppercase", letterSpacing: "0.05em", borderBottom: "1px solid var(--borderline)" }}>
+                    {c.replace(/_/g, " ")}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {data.map((row, ri) => (
+                <tr key={ri} style={{ borderBottom: "1px solid rgba(255,255,255,0.04)" }}>
+                  {cols.map(c => (
+                    <td key={c} style={{ padding: "0.4rem 0.6rem", color: "var(--text-main)" }}>
+                      {formatValue(row[c], format)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    );
+  }
+
+  if (type === "pie") {
+    return (
+      <div style={cardStyle}>
+        <p style={titleStyle}>{title}</p>
+        <ResponsiveContainer width="100%" height={220}>
+          <PieChart>
+            <Pie data={data} dataKey={yk} nameKey={xk} cx="50%" cy="50%" outerRadius={80} label={({ cx: pcx, cy: pcy, x, y, name, percent }) => <text x={x} y={y} fill="#fff" textAnchor={x > pcx ? "start" : "end"} dominantBaseline="central" fontSize={10} fontFamily="var(--font-mono)">{`${name} ${(percent * 100).toFixed(0)}%`}</text>} labelLine={false}>
+              {data.map((_, idx) => <Cell key={idx} fill={VIZ_COLORS[idx % VIZ_COLORS.length]} />)}
+            </Pie>
+            <Tooltip formatter={(v: unknown) => formatValue(v, format)} contentStyle={{ background: "var(--surface)", border: "1px solid var(--borderline)", borderRadius: 6, fontSize: "0.75rem", color: "#fff" }} itemStyle={{ color: "#fff" }} />
+            <Legend wrapperStyle={{ fontSize: "0.72rem", color: "var(--text-sec)" }} />
+          </PieChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+
+  if (type === "line") {
+    return (
+      <div style={cardStyle}>
+        <p style={titleStyle}>{title}</p>
+        <ResponsiveContainer width="100%" height={200}>
+          <LineChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+            <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+            <XAxis dataKey={xk} tick={{ fontSize: 10, fill: "var(--text-sec)", fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} />
+            <YAxis tick={{ fontSize: 10, fill: "var(--text-sec)", fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} tickFormatter={v => formatValue(v, format)} width={60} />
+            <Tooltip cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }} formatter={(v: unknown) => formatValue(v, format)} contentStyle={{ background: "var(--surface)", border: "1px solid var(--borderline)", borderRadius: 6, fontSize: "0.75rem", color: "#fff" }} itemStyle={{ color: "#fff" }} />
+            <Line type="monotone" dataKey={yk} stroke={BLUE} strokeWidth={2} dot={{ fill: BLUE, r: 3 }} />
+          </LineChart>
+        </ResponsiveContainer>
+      </div>
+    );
+  }
+
+  if (type === "gauge") {
+    const pct = Math.min(100, Math.max(0, parseFloat(String(data[0]?.[yk] ?? data[0]?.[xk] ?? 0))));
+    const color = pct >= 90 ? "#EF4444" : pct >= 75 ? "#F59E0B" : "#34D399";
+    const r = 54, cx = 70, cy = 70, stroke = 2 * Math.PI * r;
+    const dash = (pct / 100) * stroke;
+    return (
+      <div style={cardStyle}>
+        <p style={titleStyle}>{title}</p>
+        <div style={{ display: "flex", alignItems: "center", gap: "1.5rem" }}>
+          <svg width="140" height="80" viewBox="0 0 140 80">
+            <circle cx={cx} cy={cy} r={r} fill="none" stroke="rgba(255,255,255,0.07)" strokeWidth={10} strokeDasharray={`${stroke / 2} ${stroke}`} strokeLinecap="round" transform={`rotate(-180 ${cx} ${cy})`} />
+            <circle cx={cx} cy={cy} r={r} fill="none" stroke={color} strokeWidth={10} strokeDasharray={`${dash / 2} ${stroke}`} strokeLinecap="round" transform={`rotate(-180 ${cx} ${cy})`} style={{ transition: "stroke-dasharray 0.6s ease" }} />
+            <text x={cx} y={cy - 8} textAnchor="middle" fill="white" fontSize="18" fontWeight="700" fontFamily="var(--font-display)">{pct.toFixed(0)}%</text>
+            <text x={cx} y={cy + 10} textAnchor="middle" fill="rgba(255,255,255,0.4)" fontSize="9" fontFamily="var(--font-mono)">UTILIZED</text>
+          </svg>
+          <div>
+            <p style={{ fontSize: "0.72rem", color: "var(--text-sec)", fontFamily: "var(--font-mono)" }}>{pct >= 90 ? "CRITICAL" : pct >= 75 ? "WARNING" : "HEALTHY"}</p>
+            <p style={{ fontSize: "1.5rem", fontWeight: 700, color, fontFamily: "var(--font-display)" }}>{pct.toFixed(1)}%</p>
+          </div>
+        </div>
+      </div>
+    );
+  }
+
+  // Default: bar
+  return (
+    <div style={cardStyle}>
+      <p style={titleStyle}>{title}</p>
+      <ResponsiveContainer width="100%" height={200}>
+        <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+          <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
+          <XAxis dataKey={xk} tick={{ fontSize: 10, fill: "var(--text-sec)", fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} />
+          <YAxis tick={{ fontSize: 10, fill: "var(--text-sec)", fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} tickFormatter={v => formatValue(v, format)} width={60} />
+          <Tooltip cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v: unknown) => formatValue(v, format)} contentStyle={{ background: "var(--surface)", border: "1px solid var(--borderline)", borderRadius: 6, fontSize: "0.75rem", color: "#fff" }} itemStyle={{ color: "#fff" }} />
+          <Bar dataKey={yk} radius={[4, 4, 0, 0]} activeBar={false}>
+            {data.map((_, idx) => <Cell key={idx} fill={VIZ_COLORS[idx % VIZ_COLORS.length]} />)}
+          </Bar>
+        </BarChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 // ── Main page ────────────────────────────────────────────────────────────────
 
 export default function QueryPage() {
@@ -193,12 +369,13 @@ export default function QueryPage() {
 
     let streamedContent = "";
     const streamedToolCalls: Array<{ tool: string; input: Record<string, unknown> }> = [];
+    const streamedVisualizations: VisualizationSpec[] = [];
 
     try {
       const res = await fetch("/api/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage }),
+        body: JSON.stringify({ message: userMessage, use_alt_model: getUseAltModel() }),
       });
 
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);
@@ -217,7 +394,7 @@ export default function QueryPage() {
         for (const line of lines) {
           if (!line.trim()) continue;
           try {
-            const event = JSON.parse(line) as { type: string; content?: string; tool?: string; error?: string };
+            const event = JSON.parse(line) as { type: string; content?: string; tool?: string; error?: string; visualization?: VisualizationSpec };
             if (event.type === "text_delta" && event.content) {
               streamedContent += event.content;
               setMessages(prev => {
@@ -232,6 +409,14 @@ export default function QueryPage() {
                 const updated = [...prev];
                 const last = updated[updated.length - 1];
                 if (last?.role === "assistant") updated[updated.length - 1] = { ...last, tool_calls: [...(last.tool_calls || []), { tool: event.tool!, input: {} }] };
+                return updated;
+              });
+            } else if (event.type === "visualization" && event.visualization) {
+              streamedVisualizations.push(event.visualization);
+              setMessages(prev => {
+                const updated = [...prev];
+                const last = updated[updated.length - 1];
+                if (last?.role === "assistant") updated[updated.length - 1] = { ...last, visualizations: [...(last.visualizations || []), event.visualization!] };
                 return updated;
               });
             } else if (event.type === "error") {
@@ -261,7 +446,7 @@ export default function QueryPage() {
     const finalMsgs: Message[] = [
       ...prevMsgs,
       { role: "user", content: userMessage },
-      { role: "assistant", content: streamedContent, tool_calls: streamedToolCalls },
+      { role: "assistant", content: streamedContent, tool_calls: streamedToolCalls, visualizations: streamedVisualizations.length > 0 ? streamedVisualizations : undefined },
     ];
     if (finalMsgs.length >= 2) {
       const title = userMessage.slice(0, 60);
@@ -287,9 +472,9 @@ export default function QueryPage() {
     "Who are the top 5 spenders this quarter?",
     "Show me all policy violations",
     "Are there any suspicious split charges?",
-    "What's the budget status for Engineering?",
-    "Compare marketing vs engineering spend on software",
-    "Generate a report for Alice Chen's SF offsite",
+    "What's the budget status for Fleet Operations?",
+    "Compare Fleet Operations vs Administration spend",
+    "Generate a report for Fleet Cards expenses",
   ];
 
   return (
@@ -400,7 +585,7 @@ export default function QueryPage() {
             <div>
               <div className="flex items-center gap-3 mb-1">
                 <div className="h-px w-4" style={{ background: "var(--accent-primary)", opacity: 0.5 }} />
-                <span className="mono-label" style={{ color: "var(--accent-primary)", opacity: 0.7 }}>BRIM_CHALLENGE // FEATURE_01</span>
+                <span className="mono-label" style={{ color: "var(--accent-primary)", opacity: 0.7 }}>AI_QUERY</span>
               </div>
               <h1 className="text-lg tracking-tight" style={{ fontFamily: "var(--font-display), Georgia, serif", fontWeight: 400 }}>Talk to Your Data</h1>
             </div>
@@ -423,7 +608,7 @@ export default function QueryPage() {
             <div className="flex flex-col items-center justify-center h-full stagger-children">
               <div className="flex items-center justify-center gap-3 mb-8">
                 <div className="h-px w-8" style={{ background: "var(--accent-primary)", opacity: 0.4 }} />
-                <span className="mono-label" style={{ color: "var(--accent-primary)", opacity: 0.7 }}>BRIM_CHALLENGE // FEATURE_01</span>
+                <span className="mono-label" style={{ color: "var(--accent-primary)", opacity: 0.7 }}>AI_QUERY</span>
                 <div className="h-px w-8" style={{ background: "var(--accent-primary)", opacity: 0.4 }} />
               </div>
               <h2 className="text-h2 mb-3 text-center" style={{ fontFamily: "var(--font-display), Georgia, serif", fontWeight: 400 }}>Ask me anything.</h2>
@@ -478,6 +663,14 @@ export default function QueryPage() {
                   <MarkdownContent content={msg.content} />
                 ) : (
                   msg.content
+                )}
+
+                {msg.visualizations && msg.visualizations.length > 0 && (
+                  <div className="mt-1">
+                    {msg.visualizations.map((viz, vi) => (
+                      <VisualizationCard key={vi} spec={viz} />
+                    ))}
+                  </div>
                 )}
 
                 {msg.tool_calls && msg.tool_calls.length > 0 && (

@@ -1,8 +1,10 @@
 "use client";
 
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { ActionPlan, ActionItem, AgentStreamEvent } from "@/lib/claude/agent";
+import { getUseAltModel } from "@/lib/model-pref";
+import { Terminal, type TerminalLine } from "@/components/ui/terminal";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
 const SKY = "#38BDF8";
@@ -12,6 +14,15 @@ const AMBER = "#F59E0B";
 const ORANGE = "#F97316";
 
 type Mode = "idle" | "scanning" | "briefing" | "executing" | "complete";
+
+const HISTORY_KEY = "autopilot-plan-history";
+const MAX_HISTORY = 5;
+
+interface PlanHistoryEntry {
+  id: string;
+  plan: ActionPlan;
+  generatedAt: number;
+}
 
 interface ToolStatus {
   name: string;
@@ -149,6 +160,56 @@ function RiskBadge({ level }: { level: ActionPlan["risk_level"] }) {
   );
 }
 
+// ── Scanning terminal ─────────────────────────────────────────────────────────
+function ScanningTerminal({
+  toolStatuses,
+  streamText,
+}: {
+  toolStatuses: ToolStatus[];
+  streamText: string;
+}) {
+  const lines = useMemo<TerminalLine[]>(() => {
+    const result: TerminalLine[] = [];
+
+    if (toolStatuses.length === 0 && !streamText) {
+      result.push({ text: "$ initializing advisory agent...", type: "command" });
+      return result;
+    }
+
+    toolStatuses.forEach((t) => {
+      if (t.status === "running") {
+        result.push({ text: `$ scanning ${t.label.toLowerCase()}...`, type: "command" });
+      } else if (t.status === "done") {
+        result.push({ text: `$ scanning ${t.label.toLowerCase()}`, type: "command" });
+        result.push({ text: `  ✔ ${t.label} complete`, type: "success" });
+      } else {
+        result.push({ text: `  ○ ${t.label} queued`, type: "info" });
+      }
+    });
+
+    // Show last 4 non-empty lines of stream text as info
+    if (streamText) {
+      const lines = streamText
+        .split("\n")
+        .map((l) => l.trim())
+        .filter((l) => l.length > 0)
+        .slice(-4);
+      lines.forEach((l) => result.push({ text: `  ${l}`, type: "info" }));
+    }
+
+    return result;
+  }, [toolStatuses, streamText]);
+
+  return (
+    <Terminal
+      lines={lines}
+      title="advisory-agent"
+      minHeight={320}
+      maxHeight="60vh"
+    />
+  );
+}
+
 // ── Action card ───────────────────────────────────────────────────────────────
 function ActionCard({
   action,
@@ -201,8 +262,8 @@ function ActionCard({
       <div className="p-4">
         {/* Header row */}
         <div className="flex items-start gap-3">
-          {/* Checkbox (only for executable actions) */}
-          {action.auto_executable && !isDone && (
+          {/* Checkbox — all actions are selectable; non-auto-executable ones get acknowledged */}
+          {!isDone && (
             <button
               onClick={onToggle}
               className="mt-0.5 flex-shrink-0 w-4 h-4 rounded transition-all duration-150 cursor-pointer"
@@ -217,9 +278,6 @@ function ActionCard({
                 </svg>
               )}
             </button>
-          )}
-          {!action.auto_executable && !isDone && (
-            <div className="mt-0.5 w-4 h-4 flex-shrink-0 rounded opacity-20" style={{ border: "1.5px solid rgba(255,255,255,0.2)" }} />
           )}
           {isDone && (
             <div className="mt-0.5 w-4 h-4 flex-shrink-0" />
@@ -285,6 +343,7 @@ export default function AutopilotPage() {
   const [executing, setExecuting] = useState(false);
   const [executionDone, setExecutionDone] = useState(false);
   const [idleStats, setIdleStats] = useState<{ approvals: number; violations: number; depts: number } | null>(null);
+  const [planHistory, setPlanHistory] = useState<PlanHistoryEntry[]>([]);
   const terminalRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
@@ -300,6 +359,14 @@ export default function AutopilotPage() {
         });
       })
       .catch(() => {});
+  }, []);
+
+  // Load plan history from localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(HISTORY_KEY);
+      if (stored) setPlanHistory(JSON.parse(stored));
+    } catch {}
   }, []);
 
   // Auto-scroll terminal
@@ -319,7 +386,11 @@ export default function AutopilotPage() {
     setExecutionDone(false);
 
     try {
-      const res = await fetch("/api/autopilot", { method: "POST" });
+      const res = await fetch("/api/autopilot", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ use_alt_model: getUseAltModel() }),
+      });
       if (!res.ok || !res.body) throw new Error("Failed to connect");
 
       const reader = res.body.getReader();
@@ -365,11 +436,15 @@ export default function AutopilotPage() {
                 prev.map((t) => ({ ...t, status: "done" as const }))
               );
               setPlan(event.plan);
-              // Auto-select all executable actions
-              const executableIds = event.plan.actions
-                .filter((a) => a.auto_executable)
-                .map((a) => a.id);
-              setSelected(new Set(executableIds));
+              // Save to history
+              const entry: PlanHistoryEntry = { id: `${Date.now()}`, plan: event.plan, generatedAt: Date.now() };
+              setPlanHistory((prev) => {
+                const updated = [entry, ...prev].slice(0, MAX_HISTORY);
+                try { localStorage.setItem(HISTORY_KEY, JSON.stringify(updated)); } catch {}
+                return updated;
+              });
+              // Auto-select all actions (executable = execute, others = acknowledge)
+              setSelected(new Set(event.plan.actions.map((a) => a.id)));
               setMode("briefing");
             } else if (event.type === "done") {
               setToolStatuses((prev) =>
@@ -434,7 +509,7 @@ export default function AutopilotPage() {
     setExecutionDone(false);
   }, []);
 
-  const executableCount = plan ? plan.actions.filter((a) => a.auto_executable && selected.has(a.id)).length : 0;
+  const executableCount = plan ? plan.actions.filter((a) => selected.has(a.id)).length : 0;
   const totalActions = plan?.actions.length ?? 0;
 
   // ── Render ────────────────────────────────────────────────────────────────
@@ -460,7 +535,7 @@ export default function AutopilotPage() {
             <div className="flex items-center gap-3 mb-8">
               <div className="h-px w-6" style={{ background: SKY, opacity: 0.5 }} />
               <span className="text-[10px] font-mono uppercase tracking-widest" style={{ color: SKY, opacity: 0.7 }}>
-                ADVISORY_SYSTEM // BRIM FINANCIAL
+                ADVISORY_SYSTEM
               </span>
             </div>
 
@@ -506,11 +581,11 @@ export default function AutopilotPage() {
               </p>
               <div className="grid grid-cols-2 sm:grid-cols-3 gap-3">
                 <ModuleCard icon={<IconClock color={SKY} />} label="Pending Approvals" sub={idleStats ? `${idleStats.approvals} waiting` : "Loading…"} />
-                <ModuleCard icon={<IconAlert color={ORANGE} />} label="Policy Violations" sub={idleStats ? `${idleStats.violations} open` : "Loading…"} />
-                <ModuleCard icon={<IconBarChart color={AMBER} />} label="Budget Health" sub={idleStats ? `${idleStats.depts} departments` : "Loading…"} />
-                <ModuleCard icon={<IconSearch color={RED} />} label="Anomaly Detection" sub="fraud & split charges" />
-                <ModuleCard icon={<IconShield color="#A78BFA" />} label="Compliance Scan" sub="policy validation" />
-                <ModuleCard icon={<IconLightbulb color={GREEN} />} label="Vendor Insights" sub="cost reduction opps" />
+                <ModuleCard icon={<IconAlert color={SKY} />} label="Policy Violations" sub={idleStats ? `${idleStats.violations} open` : "Loading…"} />
+                <ModuleCard icon={<IconBarChart color={SKY} />} label="Budget Health" sub={idleStats ? `${idleStats.depts} departments` : "Loading…"} />
+                <ModuleCard icon={<IconSearch color={SKY} />} label="Anomaly Detection" sub="fraud & split charges" />
+                <ModuleCard icon={<IconShield color={SKY} />} label="Compliance Scan" sub="policy validation" />
+                <ModuleCard icon={<IconLightbulb color={SKY} />} label="Vendor Insights" sub="cost reduction opps" />
               </div>
             </div>
 
@@ -536,89 +611,76 @@ export default function AutopilotPage() {
                 Uses Claude API with multi-step tool calling
               </p>
             </div>
+
+            {/* Recent analyses */}
+            {planHistory.length > 0 && (
+              <div className="mt-12">
+                <div className="flex items-center justify-between mb-4">
+                  <p className="text-[10px] font-mono uppercase tracking-widest" style={{ color: "rgba(255,255,255,0.2)" }}>
+                    RECENT ANALYSES
+                  </p>
+                  <button
+                    onClick={() => {
+                      setPlanHistory([]);
+                      try { localStorage.removeItem(HISTORY_KEY); } catch {}
+                    }}
+                    className="text-[10px] font-mono uppercase tracking-widest transition-colors hover:text-white/40 cursor-pointer"
+                    style={{ color: "rgba(255,255,255,0.18)" }}
+                  >
+                    Clear all ×
+                  </button>
+                </div>
+                <div className="space-y-2">
+                  {planHistory.map((entry) => {
+                    const riskColor = { low: GREEN, medium: AMBER, high: ORANGE, critical: RED }[entry.plan.risk_level] || SKY;
+                    const d = new Date(entry.generatedAt);
+                    const label = d.toLocaleDateString([], { month: "short", day: "numeric" }) + " " + d.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
+                    return (
+                      <button
+                        key={entry.id}
+                        onClick={() => { setPlan(entry.plan); setMode("briefing"); setSelected(new Set(entry.plan.actions.map((a) => a.id))); }}
+                        className="w-full flex items-center justify-between px-4 py-3 rounded-xl transition-all duration-200 hover:bg-white/5 cursor-pointer text-left"
+                        style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.06)" }}
+                      >
+                        <div className="flex items-center gap-3">
+                          <span className="w-1.5 h-1.5 rounded-full flex-shrink-0" style={{ background: riskColor, boxShadow: `0 0 6px ${riskColor}` }} />
+                          <span className="text-[12px]" style={{ color: "rgba(255,255,255,0.6)" }}>
+                            {entry.plan.actions.length} actions · {entry.plan.risk_level} risk
+                          </span>
+                        </div>
+                        <div className="flex items-center gap-3">
+                          <span className="text-[10px] font-mono" style={{ color: "rgba(255,255,255,0.25)" }}>{label}</span>
+                          <span className="text-[10px]" style={{ color: SKY, opacity: 0.6 }}>view →</span>
+                        </div>
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            )}
           </div>
         )}
 
         {/* ── SCANNING ─────────────────────────────────────────────────────── */}
-        {mode === "scanning" && (
-          <div className="animate-fade-up">
+        {(mode === "scanning" || ((mode === "briefing" || mode === "executing" || mode === "complete") && toolStatuses.length > 0)) && (
+          <div className={mode === "scanning" ? "animate-fade-up" : "mb-8"}>
             {/* Header */}
             <div className="flex items-center justify-between mb-6">
               <div className="flex items-center gap-3">
-                <span className="w-2 h-2 rounded-full animate-pulse" style={{ background: SKY, boxShadow: `0 0 8px ${SKY}` }} />
-                <span className="text-[11px] font-mono uppercase tracking-widest" style={{ color: SKY }}>
-                  ADVISORY_SYSTEM // SCANNING
+                <span className="w-2 h-2 rounded-full" style={{ background: mode === "scanning" ? SKY : "#22C55E", boxShadow: `0 0 8px ${mode === "scanning" ? SKY : "#22C55E"}`, animation: mode === "scanning" ? "pulse 2s infinite" : "none" }} />
+                <span className="text-[11px] font-mono uppercase tracking-widest" style={{ color: mode === "scanning" ? SKY : "#22C55E" }}>
+                  {mode === "scanning" ? "ADVISORY_SYSTEM // SCANNING" : "ADVISORY_SYSTEM // ANALYSIS_TRACE"}
                 </span>
               </div>
-              <span className="text-[10px] font-mono" style={{ color: "rgba(255,255,255,0.2)" }}>
-                Claude is analyzing your data…
-              </span>
-            </div>
-
-            {/* Tool status tracker */}
-            {toolStatuses.length > 0 && (
-              <div
-                className="mb-4 p-4 rounded-xl flex flex-wrap gap-2"
-                style={{ background: "rgba(255,255,255,0.02)", border: "1px solid rgba(255,255,255,0.07)" }}
-              >
-                {toolStatuses.map((t) => (
-                  <span
-                    key={t.name}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[10px] font-mono transition-all duration-300"
-                    style={{
-                      background:
-                        t.status === "done"
-                          ? "rgba(34,197,94,0.1)"
-                          : t.status === "running"
-                          ? "rgba(56,189,248,0.1)"
-                          : "rgba(255,255,255,0.04)",
-                      border: `1px solid ${
-                        t.status === "done"
-                          ? "rgba(34,197,94,0.3)"
-                          : t.status === "running"
-                          ? "rgba(56,189,248,0.3)"
-                          : "rgba(255,255,255,0.08)"
-                      }`,
-                      color:
-                        t.status === "done"
-                          ? GREEN
-                          : t.status === "running"
-                          ? SKY
-                          : "rgba(255,255,255,0.3)",
-                    }}
-                  >
-                    {t.status === "done" ? "✓" : t.status === "running" ? (
-                      <span className="w-1 h-1 rounded-full inline-flex animate-pulse" style={{ background: SKY }} />
-                    ) : "○"}
-                    {t.label}
-                  </span>
-                ))}
-              </div>
-            )}
-
-            {/* Terminal */}
-            <div
-              ref={terminalRef}
-              className="rounded-xl p-5 font-mono text-[12px] leading-relaxed overflow-y-auto"
-              style={{
-                background: "rgba(5,7,15,0.9)",
-                border: "1px solid rgba(255,255,255,0.07)",
-                minHeight: "320px",
-                maxHeight: "60vh",
-                color: "rgba(255,255,255,0.65)",
-                whiteSpace: "pre-wrap",
-              }}
-            >
-              {streamText || (
-                <span className="animate-pulse" style={{ color: SKY }}>
-                  Initializing Claude advisory agent…
+              {mode === "scanning" && (
+                <span className="text-[10px] font-mono" style={{ color: "rgba(255,255,255,0.2)" }}>
+                  Claude is analyzing your data…
                 </span>
               )}
-              <span
-                className="inline-block w-2 h-3.5 ml-0.5 align-middle animate-pulse"
-                style={{ background: SKY, opacity: 0.8 }}
-              />
             </div>
+
+            {/* Terminal — live lines from tool statuses + stream */}
+            <ScanningTerminal toolStatuses={toolStatuses} streamText={streamText} />
           </div>
         )}
 
@@ -695,7 +757,7 @@ export default function AutopilotPage() {
                   <div className="flex items-center gap-2">
                     <button
                       onClick={() => {
-                        const all = new Set(plan.actions.filter((a) => a.auto_executable).map((a) => a.id));
+                        const all = new Set(plan.actions.map((a) => a.id));
                         setSelected(all);
                       }}
                       className="text-[10px] font-mono px-2.5 py-1 rounded-lg cursor-pointer transition-all hover:bg-white/5"
@@ -753,8 +815,8 @@ export default function AutopilotPage() {
                   </p>
                   <p className="text-[11px]" style={{ color: "rgba(255,255,255,0.35)" }}>
                     {executableCount > 0
-                      ? "Claude will execute these automatically"
-                      : "Select actions above to execute"}
+                      ? "Approvals executed · alerts acknowledged"
+                      : "Select actions above to execute or acknowledge"}
                   </p>
                 </div>
 

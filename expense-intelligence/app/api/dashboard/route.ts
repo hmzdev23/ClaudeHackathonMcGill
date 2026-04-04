@@ -1,4 +1,4 @@
-import { getDashboardKpis, getViolationsSummary, getBudgetStatus, getMonthlySpend, getCategorySpend, getDepartmentSpend } from '@/lib/db/queries';
+import { getDashboardKpis, getViolationsSummary, getBudgetStatus, getMonthlySpend, getCategorySpend, getDepartmentSpend, getAnomalies } from '@/lib/db/queries';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,6 +11,8 @@ export async function GET() {
     const category_spend = getCategorySpend();
     const department_spend = getDepartmentSpend();
 
+    const anomalies = getAnomalies({ status: 'open' });
+
     return Response.json({
       kpis,
       recent_violations: recent_violations.slice(0, 5),
@@ -18,6 +20,7 @@ export async function GET() {
       monthly_spend,
       category_spend,
       department_spend,
+      anomaly_count: anomalies.length,
     });
   } catch (error) {
     return Response.json(

@@ -9,9 +9,9 @@ const navItems = [
   { href: "/query", label: "AI Query", tag: "01" },
   { href: "/compliance", label: "Compliance", tag: "02" },
   { href: "/approvals", label: "Approvals", tag: "03" },
-  { href: "/anomalies", label: "Anomalies", tag: "04" },
-  { href: "/budgets", label: "Budgets", tag: "05" },
-  { href: "/reports", label: "Reports", tag: "06" },
+  { href: "/reports", label: "Reports", tag: "04" },
+  { href: "/forecast", label: "Forecasting", tag: "05" },
+  { href: "/autopilot", label: "Autopilot", tag: "06" },
   { href: "/insights", label: "Insights", tag: "07" },
 ];
 
@@ -27,7 +27,7 @@ export function Sidebar() {
           <circle cx="12" cy="12" r="4" fill="white" />
         </svg>
         <span className="font-semibold text-sm tracking-tight uppercase" style={{ color: "var(--text-main)" }}>
-          Expense Intelligence
+          Lucid
         </span>
       </div>
 

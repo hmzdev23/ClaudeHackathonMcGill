@@ -64,16 +64,21 @@ export default function BudgetsPage() {
           </p>
         </div>
         <div className="text-right">
-          <span className="mono-label">{budgets[0]?.period || "CURRENT_QTR"}</span>
+          <span className="mono-label">
+            {budgets[0]?.period
+              ? budgets[0].period.replace(/^(\d{4})-Q(\d)$/, "Q$2 $1")
+              : "CURRENT_QTR"}
+          </span>
         </div>
       </div>
 
       {budgets.length === 0 ? (
         <div className="tactile-base relative overflow-hidden p-12 text-center animate-fade-up relative z-10">
           <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(to right, var(--accent-primary), transparent)" }} />
-          <span className="mono-label block mb-4" style={{ color: "var(--accent-primary)" }}>NO_DATA</span>
-          <h2 className="text-h3" style={{ fontFamily: "var(--font-display), Georgia, serif", fontWeight: 400 }}>No budget data.</h2>
-          <p className="text-body mt-2">Initialize data to see budget tracking.</p>
+          <span className="mono-label block mb-4" style={{ color: "var(--accent-primary)" }}>NO_BUDGET_DATA</span>
+          <h2 className="text-h3" style={{ fontFamily: "var(--font-display), Georgia, serif", fontWeight: 400 }}>No budget allocations in source data.</h2>
+          <p className="text-body mt-2 mb-4 max-w-md mx-auto">The Brim dataset contains transaction records only — no budget allocations were provided. Budget vs. actual comparisons require budget data from your finance system.</p>
+          <p className="mono-label" style={{ color: "var(--text-sec)", opacity: 0.45 }}>SOURCE: dummy_data(2).xlsx</p>
         </div>
       ) : (
         <div className="space-y-3 animate-fade-up delay-1 relative z-10">

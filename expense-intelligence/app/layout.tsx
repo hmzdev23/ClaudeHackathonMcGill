@@ -26,7 +26,7 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Brim Expense Intelligence",
+  title: "Brim Lucid",
   description:
     "AI-powered expense management for SMBs",
 };

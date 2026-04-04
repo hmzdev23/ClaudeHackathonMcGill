@@ -5,8 +5,12 @@ import { AUTOPILOT_SYSTEM_PROMPT } from '@/lib/claude/prompts';
 
 export const dynamic = 'force-dynamic';
 
-export async function POST() {
+export async function POST(req: Request) {
   try {
+    const body = await req.json().catch(() => ({}));
+    // Autopilot requires multi-step tool chaining — always use Claude
+    const useAlt = false;
+
     const stream = runAgentStream(
       [
         {
@@ -18,7 +22,8 @@ export async function POST() {
       AUTOPILOT_SYSTEM_PROMPT,
       AUTOPILOT_TOOLS,
       handleAutopilotToolCall,
-      12  // higher iteration limit for multi-tool autopilot workflow
+      12,
+      useAlt
     );
 
     return new Response(stream, {

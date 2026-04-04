@@ -1,19 +1,7 @@
 import { getDb } from '@/lib/db';
-import { getBudgetStatus } from '@/lib/db/queries';
 
 export const dynamic = 'force-dynamic';
 
-function getCurrentQuarter() {
-  const now = new Date();
-  const q = Math.ceil((now.getMonth() + 1) / 3);
-  return `${now.getFullYear()}-Q${q}`;
-}
-
-function getQuarterStart(period: string): Date {
-  const [y, qStr] = period.split('-Q');
-  const q = parseInt(qStr, 10);
-  return new Date(parseInt(y, 10), (q - 1) * 3, 1);
-}
 
 export async function GET() {
   try {
@@ -52,43 +40,28 @@ export async function GET() {
       potential_savings: Math.round(r.total_spend * 0.12 * 100) / 100,
     }));
 
-    // ── 2. Budget Forecasting ────────────────────────────────────────────────
-    const period = getCurrentQuarter();
-    const allBudgets = getBudgetStatus(undefined, period);
-    const totalBudgets = allBudgets.filter(b => b.category === 'total');
+    // ── 2. Department Spend Summary ──────────────────────────────────────────
+    const deptSpendRows = db.prepare(`
+      SELECT
+        department,
+        ROUND(SUM(amount), 2) as total_spend,
+        COUNT(*) as tx_count,
+        ROUND(AVG(amount), 2) as avg_tx,
+        COUNT(DISTINCT employee_id) as employee_count
+      FROM transactions
+      GROUP BY department
+      ORDER BY total_spend DESC
+    `).all() as Array<{ department: string; total_spend: number; tx_count: number; avg_tx: number; employee_count: number }>;
 
-    // Days elapsed in quarter
-    const qStart = getQuarterStart(period);
-    const now = new Date();
-    const daysElapsed = Math.max(1, Math.ceil((now.getTime() - qStart.getTime()) / 86400000));
-    const burnRatePerDay = (dept: typeof totalBudgets[0]) =>
-      dept.spent > 0 ? dept.spent / daysElapsed : 0;
-
-    const budget_forecast = totalBudgets.map(b => {
-      const rate = burnRatePerDay(b);
-      const daysToExhaustion = rate > 0 ? Math.floor((b.allocated - b.spent) / rate) : Infinity;
-      const exhaustionDate = rate > 0
-        ? new Date(now.getTime() + daysToExhaustion * 86400000).toISOString().split('T')[0]
-        : null;
-      const overrunAmount = Math.max(0, b.projected_end_of_period - b.allocated);
-      const status: 'over_budget' | 'at_risk' | 'on_track' =
-        b.percent_used >= 100 ? 'over_budget'
-        : overrunAmount > 0 || b.percent_used >= 80 ? 'at_risk'
-        : 'on_track';
-
-      return {
-        department: b.department,
-        period: b.period,
-        allocated: b.allocated,
-        spent: b.spent,
-        percent_used: b.percent_used,
-        projected_end: b.projected_end_of_period,
-        overrun_amount: overrunAmount,
-        days_until_overrun: daysToExhaustion === Infinity ? null : daysToExhaustion,
-        overrun_date: daysToExhaustion <= 0 ? 'overrun now' : exhaustionDate,
-        status,
-      };
-    }).sort((a, b) => b.percent_used - a.percent_used);
+    const totalAllDepts = deptSpendRows.reduce((s, r) => s + r.total_spend, 0);
+    const budget_forecast = deptSpendRows.map(r => ({
+      department: r.department,
+      total_spend: r.total_spend,
+      tx_count: r.tx_count,
+      avg_tx: r.avg_tx,
+      employee_count: r.employee_count,
+      pct_of_total: totalAllDepts > 0 ? Math.round((r.total_spend / totalAllDepts) * 100) : 0,
+    }));
 
     // ── 3. Peer Benchmarking ─────────────────────────────────────────────────
     const empSpend = db.prepare(`

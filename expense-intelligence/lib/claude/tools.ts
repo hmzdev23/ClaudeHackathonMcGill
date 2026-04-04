@@ -133,7 +133,7 @@ export const EXPENSE_TOOLS: Tool[] = [
   {
     name: 'render_visualization',
     description:
-      'Specify a chart or table to render for the user. Always call this after gathering data to present it visually. Choose the type that best matches the data: bar for comparisons across categories, line for trends over time, pie for composition/breakdown, table for detailed rows, number for a single KPI metric, gauge for budget utilization percentage.',
+      'REQUIRED: Render a chart or table inline in the chat. You MUST call this tool whenever you have grouped/aggregated data to show. Call it BEFORE writing your text response. Use: bar=grouped comparisons (top spenders, spend by dept/category), line=trends over time, pie=proportions/breakdown, table=multiple detail rows, number=single KPI value, gauge=budget utilization %. The chart appears inline — users expect to see it.',
     input_schema: {
       type: 'object' as const,
       required: ['type', 'title', 'data'],

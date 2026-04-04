@@ -8,6 +8,7 @@ interface StoredAnomaly {
   type: string;
   transaction_ids: string;
   employee_id: string;
+  employee_name?: string;
   description: string;
   severity: string;
   detected_at: string;
@@ -111,7 +112,8 @@ export default function AnomaliesPage() {
           <div className="absolute top-0 left-0 right-0 h-px" style={{ background: "linear-gradient(to right, var(--accent-green), transparent)" }} />
           <span className="mono-label block mb-4" style={{ color: "var(--accent-green)" }}>ALL_CLEAR</span>
           <h2 className="text-h3" style={{ fontFamily: "var(--font-display), Georgia, serif", fontWeight: 400 }}>No anomalies detected.</h2>
-          <p className="text-body mt-2">Initialize data to see example anomalies.</p>
+          <p className="text-body mt-2 mb-4">Click <strong className="font-semibold" style={{ color: "var(--text-main)" }}>RELOAD_DATA</strong> in the top navbar to load demo data with real anomaly patterns.</p>
+          <p className="mono-label" style={{ color: "var(--text-sec)", opacity: 0.45 }}>↑ Top right corner of the navigation bar</p>
         </div>
       ) : (
         <div className="space-y-[1px] bg-[var(--borderline)] border border-[var(--borderline)] animate-fade-up delay-2 relative z-10">
@@ -132,7 +134,7 @@ export default function AnomaliesPage() {
                   </div>
                   <p className="text-sm mt-2" style={{ color: "var(--text-main)" }}>{a.description}</p>
                   <span className="mono-label mt-3 block">
-                    EMPLOYEE: {a.employee_id} · DETECTED: {a.detected_at?.split("T")[0] || ""}
+                    CARD: {a.employee_name ?? a.employee_id} · DETECTED: {a.detected_at?.split("T")[0] || ""}
                   </span>
                 </div>
               </div>

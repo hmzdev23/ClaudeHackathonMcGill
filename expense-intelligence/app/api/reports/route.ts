@@ -28,7 +28,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { employee_id, event_tag } = await req.json();
+    const { employee_id, event_tag, use_alt_model = false } = await req.json();
 
     if (!employee_id) {
       return Response.json(
@@ -68,17 +68,21 @@ Return ONLY the JSON object, no other text.`;
     let title = `Expense Report - ${event_tag || 'General'}`;
     let narrative = '';
     let lineItems: Array<{ description: string; amount: number; category: string; date: string }> = [];
-    let policySummary = 'No policy issues detected.';
+    let policySummary: 'clean' | 'violations_present' = 'clean';
 
     try {
-      const response = await runAgentOnce(prompt, REPORT_GENERATION_PROMPT);
+      const response = await runAgentOnce(prompt, REPORT_GENERATION_PROMPT, false, use_alt_model);
       const jsonMatch = response.match(/\{[\s\S]*\}/);
       if (jsonMatch) {
         const parsed = JSON.parse(jsonMatch[0]);
         title = parsed.title || title;
         narrative = parsed.narrative || '';
         lineItems = parsed.line_items || [];
-        policySummary = parsed.policy_summary || policySummary;
+        // Normalise to the two allowed CHECK values
+        const rawStatus: string = parsed.policy_summary || '';
+        policySummary = rawStatus === 'violations_present' || /violation|issue|exceed|non.?compliant|flag/i.test(rawStatus)
+          ? 'violations_present'
+          : 'clean';
       }
     } catch {
       // Use defaults if Claude call fails
@@ -91,7 +95,36 @@ Return ONLY the JSON object, no other text.`;
       }));
     }
 
-    // 5. Insert expense report
+    // 5. Compute analytics from real transactions
+    const categoryMap: Record<string, { total: number; count: number }> = {};
+    const monthMap: Record<string, number> = {};
+    transactions.forEach((t) => {
+      const cat = t.category || 'other';
+      categoryMap[cat] = categoryMap[cat] ?? { total: 0, count: 0 };
+      categoryMap[cat].total += t.amount;
+      categoryMap[cat].count += 1;
+      const month = t.date.slice(0, 7);
+      monthMap[month] = (monthMap[month] ?? 0) + t.amount;
+    });
+
+    const category_breakdown = Object.entries(categoryMap)
+      .map(([category, { total, count }]) => ({ category, total: Math.round(total * 100) / 100, count }))
+      .sort((a, b) => b.total - a.total);
+
+    const monthly_breakdown = Object.entries(monthMap)
+      .map(([month, total]) => ({ month, total: Math.round(total * 100) / 100 }))
+      .sort((a, b) => a.month.localeCompare(b.month));
+
+    const dates = transactions.map((t) => t.date).sort();
+    const date_range = { from: dates[0], to: dates[dates.length - 1] };
+
+    // Top 20 transactions by amount for the report table
+    const top_transactions = [...transactions]
+      .sort((a, b) => b.amount - a.amount)
+      .slice(0, 20)
+      .map((t) => ({ id: t.id, date: t.date, merchant: t.merchant, category: t.category, amount: t.amount, description: t.description }));
+
+    // 6. Insert expense report
     const reportId = insertExpenseReport({
       title,
       employee_id,
@@ -105,7 +138,7 @@ Return ONLY the JSON object, no other text.`;
       cfo_approved: 0,
     });
 
-    // 6. Return the report
+    // 7. Return the report
     return Response.json({
       success: true,
       report: {
@@ -113,12 +146,18 @@ Return ONLY the JSON object, no other text.`;
         title,
         employee_id,
         employee_name: transactions[0].employee_name,
+        department: transactions[0].department,
         event_tag: event_tag || null,
         total_amount: Math.round(totalAmount * 100) / 100,
         narrative,
         line_items: lineItems,
         policy_summary: policySummary,
         transaction_count: transactions.length,
+        category_breakdown,
+        monthly_breakdown,
+        date_range,
+        top_transactions,
+        generated_at: new Date().toISOString(),
       },
     });
   } catch (error) {
