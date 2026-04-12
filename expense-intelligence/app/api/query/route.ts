@@ -2,6 +2,7 @@ import { runAgentStream } from '@/lib/claude/agent';
 import { SYSTEM_PROMPT } from '@/lib/claude/prompts';
 
 export const dynamic = 'force-dynamic';
+export const maxDuration = 60;
 
 export async function POST(req: Request) {
   try {
