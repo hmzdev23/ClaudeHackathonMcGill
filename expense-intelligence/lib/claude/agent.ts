@@ -1,9 +1,7 @@
-import { getClaudeClient, MODEL, ALT_MODEL } from './client';
+import { getClaudeClient, MODEL } from './client';
 import { EXPENSE_TOOLS } from './tools';
 import { handleToolCall } from './tool-handlers';
 import { SYSTEM_PROMPT } from './prompts';
-import { runGroqAgentStream, runGroqAgentOnce } from './groq-agent';
-import { runORAgentStream, runORAgentOnce } from './openrouter-agent';
 import type Anthropic from '@anthropic-ai/sdk';
 
 // ── Action Plan types (used by autopilot) ───────────────────────────────────
@@ -126,13 +124,7 @@ async function runOneIteration(
 
     } catch (err) {
       if (isRateLimitError(err)) {
-        // Rate limit — wait 15s then retry once
-        if (attempt === 0) {
-          send({ type: 'text_delta', content: '\n\n*Rate limit reached — waiting 15 seconds before retrying…*\n\n' });
-          await sleep(15000);
-          continue;
-        }
-        throw new Error('Rate limit exceeded. Please wait a moment and try again.');
+        throw new Error('Rate limit hit. Please wait a few seconds and try again.');
       }
       if (isOverloadedError(err) && attempt < STREAM_RETRIES) {
         const delay = 1000 * Math.pow(2, attempt);
@@ -155,16 +147,8 @@ export function runAgentStream(
   systemPrompt: string = SYSTEM_PROMPT,
   tools: Anthropic.Messages.Tool[] = EXPENSE_TOOLS,
   toolHandler: (name: string, input: Record<string, unknown>) => unknown = handleToolCall,
-  maxIterations: number = MAX_ITERATIONS,
-  useAlt: boolean | 'groq' | 'openrouter' = false
+  maxIterations: number = MAX_ITERATIONS
 ): ReadableStream<Uint8Array> {
-  if (useAlt === 'openrouter') {
-    return runORAgentStream(messages, systemPrompt, tools, toolHandler, maxIterations);
-  }
-  if (useAlt === true || useAlt === 'groq') {
-    return runGroqAgentStream(messages, systemPrompt, tools, toolHandler, maxIterations);
-  }
-
   const encoder = new TextEncoder();
 
   return new ReadableStream<Uint8Array>({
@@ -174,8 +158,8 @@ export function runAgentStream(
       };
 
       try {
-        const client = getClaudeClient(useAlt);
-        const model = useAlt ? ALT_MODEL : MODEL;
+        const client = getClaudeClient();
+        const model = MODEL;
         let currentMessages = [...messages];
         let iteration = 0;
 
@@ -260,18 +244,10 @@ export function runAgentStream(
 export async function runAgentOnce(
   userPrompt: string,
   systemPrompt: string,
-  withTools = false,
-  useAlt: boolean | 'groq' | 'openrouter' = false
+  withTools = false
 ): Promise<string> {
-  if (useAlt === 'openrouter') {
-    return runORAgentOnce(userPrompt, systemPrompt);
-  }
-  if (useAlt === true || useAlt === 'groq') {
-    return runGroqAgentOnce(userPrompt, systemPrompt);
-  }
-
-  const client = getClaudeClient(useAlt);
-  const model = useAlt ? ALT_MODEL : MODEL;
+  const client = getClaudeClient();
+  const model = MODEL;
 
   for (let attempt = 0; attempt <= STREAM_RETRIES; attempt++) {
     try {

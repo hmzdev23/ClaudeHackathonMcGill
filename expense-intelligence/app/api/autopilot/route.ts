@@ -1,30 +1,12 @@
-import { runAgentStream } from '@/lib/claude/agent';
-import { AUTOPILOT_TOOLS } from '@/lib/claude/autopilot-tools';
-import { handleAutopilotToolCall } from '@/lib/claude/autopilot-handlers';
-import { AUTOPILOT_SYSTEM_PROMPT } from '@/lib/claude/prompts';
+import { runDemoAutopilotStream } from '@/lib/claude/demo-agent';
 
 export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
-    const body = await req.json().catch(() => ({}));
-    // Autopilot requires multi-step tool chaining — always use Claude
-    const useAlt = false;
+    await req.json().catch(() => ({}));
 
-    const stream = runAgentStream(
-      [
-        {
-          role: 'user',
-          content:
-            'Run the full advisory analysis now. Call tools in this exact order: (1) get_dashboard_kpis, (2) get_pending_approvals, (3) get_violations, (4) detect_anomalies, (5) get_budget_status. After you have called ALL five tools and analyzed the results, you MUST call output_action_plan as your final action. Do not stop until you have called output_action_plan.',
-        },
-      ],
-      AUTOPILOT_SYSTEM_PROMPT,
-      AUTOPILOT_TOOLS,
-      handleAutopilotToolCall,
-      12,
-      useAlt
-    );
+    const stream = runDemoAutopilotStream();
 
     return new Response(stream, {
       headers: {

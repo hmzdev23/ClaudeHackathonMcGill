@@ -3,8 +3,6 @@
 import { useState } from "react";
 import { BGPattern } from "@/components/ui/bg-pattern";
 import { SelectDropdown } from "@/components/ui/select-dropdown";
-import { getUseAltModel } from "@/lib/model-pref";
-
 interface ComplianceResult {
   compliant: boolean;
   requires_approval: boolean;
@@ -29,7 +27,7 @@ export default function CompliancePage() {
       const res = await fetch("/api/compliance", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: parseFloat(amount), merchant, category, attendee_count: parseInt(attendeeCount) || 1, use_alt_model: getUseAltModel() }),
+        body: JSON.stringify({ amount: parseFloat(amount), merchant, category, attendee_count: parseInt(attendeeCount) || 1 }),
       });
       setResult(await res.json());
     } catch {

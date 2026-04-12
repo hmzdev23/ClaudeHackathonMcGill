@@ -5,7 +5,7 @@ export const dynamic = 'force-dynamic';
 
 export async function POST(req: Request) {
   try {
-    const { message, history = [], use_alt_model = false } = await req.json();
+    const { message, history = [] } = await req.json();
 
     if (!message || typeof message !== 'string') {
       return Response.json({ error: 'Message is required' }, { status: 400 });
@@ -16,7 +16,7 @@ export async function POST(req: Request) {
       { role: 'user' as const, content: message },
     ];
 
-    const stream = runAgentStream(messages, SYSTEM_PROMPT, undefined, undefined, undefined, use_alt_model);
+    const stream = runAgentStream(messages, SYSTEM_PROMPT);
 
     return new Response(stream, {
       headers: {

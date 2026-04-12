@@ -1,5 +1,4 @@
 import { getDb } from '@/lib/db';
-import { runAgentOnce } from '@/lib/claude/agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -137,27 +136,11 @@ export async function GET() {
       };
     });
 
-    // AI narrative — contextual insights
-    let insights = '';
-    try {
-      const prompt = `You are a financial forecasting analyst for a corporate card program. Analyze these spending trends and write 2-3 crisp sentences for a finance manager. Use specific dollar figures. Call out the biggest risk or opportunity.
-
-Card Groups (last 6 months data):
-${trendSummaries
-  .map(
-    (t) =>
-      `- ${t.dept}: avg $${t.avg.toLocaleString()}/mo, monthly trend ${t.slope >= 0 ? '+' : ''}$${t.slope.toLocaleString()}, ${t.trend}; Q2 2026 projected total: $${t.q2_projected.toLocaleString()}`
-  )
-  .join('\n')}
-
-Data period: ${regressionMonths[0]} to ${regressionMonths[regressionMonths.length - 1]}. Projection for: ${projectedMonths.join(', ')}.
-
-Write only the narrative — no headers, no bullet points, no markdown.`;
-      insights = await runAgentOnce(prompt, 'You are a concise financial analyst. Respond in plain prose only.');
-    } catch {
-      const topDept = trendSummaries.sort((a, b) => b.q2_projected - a.q2_projected)[0];
-      insights = `${topDept.dept} dominates spend at an average of $${topDept.avg.toLocaleString()}/month, projecting $${topDept.q2_projected.toLocaleString()} for Q2 2026. Trend analysis based on ${regressionMonths.length} months of actual transaction data.`;
-    }
+    // Forecast narrative from real computed data
+    const topDept = [...trendSummaries].sort((a, b) => b.q2_projected - a.q2_projected)[0];
+    const insights = topDept
+      ? `${topDept.dept} dominates projected spend at an average of $${topDept.avg.toLocaleString()}/month, forecasting $${topDept.q2_projected.toLocaleString()} for Q2 2026. Trend analysis is based on ${regressionMonths.length} months of actual transaction data — monitor closely for any acceleration.`
+      : 'Insufficient data for trend projection.';
 
     return Response.json({
       chart_data: chartData,

@@ -33,11 +33,6 @@ function RefreshIcon({ spinning }: { spinning: boolean }) {
   );
 }
 
-const MODEL_PREF_KEY = "ai-model-pref";
-type ModelPref = 'primary' | 'groq' | 'openrouter';
-const MODEL_CYCLE: ModelPref[] = ['primary', 'groq', 'openrouter'];
-const MODEL_LABELS: Record<ModelPref, string> = { primary: 'SONNET', groq: 'GROQ', openrouter: 'DEEPSEEK' };
-const MODEL_COLORS: Record<ModelPref, string> = { primary: '#38BDF8', groq: '#A78BFA', openrouter: '#34D399' };
 
 export function Navbar() {
   const pathname = usePathname();
@@ -45,21 +40,6 @@ export function Navbar() {
   const [mobileOpen, setMobileOpen] = useState(false);
   const [seeding, setSeeding] = useState(false);
   const [seedDone, setSeedDone] = useState(false);
-  const [model, setModel] = useState<ModelPref>('primary');
-
-  useEffect(() => {
-    try {
-      const v = localStorage.getItem(MODEL_PREF_KEY) as ModelPref | null;
-      if (v && MODEL_CYCLE.includes(v)) setModel(v);
-    } catch {}
-  }, []);
-
-  function toggleModel() {
-    const next = MODEL_CYCLE[(MODEL_CYCLE.indexOf(model) + 1) % MODEL_CYCLE.length];
-    setModel(next);
-    try { localStorage.setItem(MODEL_PREF_KEY, next); } catch {}
-  }
-
   useEffect(() => {
     document.body.style.overflow = mobileOpen ? "hidden" : "";
     return () => { document.body.style.overflow = ""; };
@@ -149,24 +129,22 @@ export function Navbar() {
 
         {/* Right side */}
         <div className="flex items-center gap-2 flex-shrink-0 ml-4">
-          {/* Model toggle — cycles SONNET → GROQ → QWEN */}
-          <button
-            onClick={toggleModel}
-            title={`Using ${MODEL_LABELS[model]} — click to cycle model`}
-            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono transition-all duration-200 rounded-lg cursor-pointer"
+          {/* Model indicator — always Sonnet */}
+          <div
+            className="hidden sm:flex items-center gap-1.5 px-3 py-1.5 text-[11px] font-mono rounded-lg"
             style={{
-              background: `${MODEL_COLORS[model]}18`,
-              border: `1px solid ${MODEL_COLORS[model]}4D`,
-              color: MODEL_COLORS[model],
+              background: "rgba(56,189,248,0.08)",
+              border: "1px solid rgba(56,189,248,0.25)",
+              color: "#38BDF8",
               letterSpacing: "0.04em",
             }}
           >
             <span
               className="w-1.5 h-1.5 rounded-full flex-shrink-0"
-              style={{ background: MODEL_COLORS[model], boxShadow: `0 0 5px ${MODEL_COLORS[model]}` }}
+              style={{ background: "#38BDF8", boxShadow: "0 0 5px #38BDF8" }}
             />
-            {MODEL_LABELS[model]}
-          </button>
+            SONNET
+          </div>
 
           {/* Reload demo data */}
           <button

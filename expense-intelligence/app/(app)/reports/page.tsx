@@ -3,7 +3,6 @@
 import { useState, useEffect } from "react";
 import { BGPattern } from "@/components/ui/bg-pattern";
 import { SelectDropdown } from "@/components/ui/select-dropdown";
-import { getUseAltModel } from "@/lib/model-pref";
 import {
   BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell,
 } from "recharts";
@@ -300,7 +299,6 @@ export default function ReportsPage() {
           employee_id: employeeId,
           event_tag: eventTag || undefined,
           title: title || undefined,
-          use_alt_model: getUseAltModel(),
         }),
       });
       const data = await res.json();

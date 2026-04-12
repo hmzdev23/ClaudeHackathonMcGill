@@ -4,9 +4,7 @@ import {
   insertExpenseReport,
   type ExpenseReport,
 } from '@/lib/db/queries';
-import { runAgentOnce } from '@/lib/claude/agent';
-import { REPORT_GENERATION_PROMPT } from '@/lib/claude/prompts';
-import { POLICY } from '@/lib/policy/rules';
+import { getDemoReportNarrative } from '@/lib/claude/demo-agent';
 
 export const dynamic = 'force-dynamic';
 
@@ -28,7 +26,7 @@ export async function GET() {
 
 export async function POST(req: Request) {
   try {
-    const { employee_id, event_tag, use_alt_model = false } = await req.json();
+    const { employee_id, event_tag } = await req.json();
 
     if (!employee_id) {
       return Response.json(
@@ -49,51 +47,22 @@ export async function POST(req: Request) {
 
     const totalAmount = transactions.reduce((sum, t) => sum + t.amount, 0);
 
-    // 2. Build prompt with transaction list + policy limits
-    const prompt = `Generate a structured expense report for the following transactions. Return JSON with: { "title": string, "narrative": string, "line_items": Array<{ description: string, amount: number, category: string, date: string }>, "total": number, "policy_summary": string }
-
-Employee: ${transactions[0].employee_name} (${transactions[0].department})
-Event: ${event_tag || 'General expenses'}
-Total: $${totalAmount.toFixed(2)}
-
-Policy limits:
-${JSON.stringify(POLICY.category_limits, null, 2)}
-
-Transactions:
-${JSON.stringify(transactions, null, 2)}
-
-Return ONLY the JSON object, no other text.`;
-
-    // 3. Call Claude for report generation
-    let title = `Expense Report - ${event_tag || 'General'}`;
-    let narrative = '';
-    let lineItems: Array<{ description: string; amount: number; category: string; date: string }> = [];
-    let policySummary: 'clean' | 'violations_present' = 'clean';
-
-    try {
-      const response = await runAgentOnce(prompt, REPORT_GENERATION_PROMPT, false, use_alt_model);
-      const jsonMatch = response.match(/\{[\s\S]*\}/);
-      if (jsonMatch) {
-        const parsed = JSON.parse(jsonMatch[0]);
-        title = parsed.title || title;
-        narrative = parsed.narrative || '';
-        lineItems = parsed.line_items || [];
-        // Normalise to the two allowed CHECK values
-        const rawStatus: string = parsed.policy_summary || '';
-        policySummary = rawStatus === 'violations_present' || /violation|issue|exceed|non.?compliant|flag/i.test(rawStatus)
-          ? 'violations_present'
-          : 'clean';
-      }
-    } catch {
-      // Use defaults if Claude call fails
-      narrative = `Expense report for ${transactions[0].employee_name} covering ${transactions.length} transactions totaling $${totalAmount.toFixed(2)}.`;
-      lineItems = transactions.map((t) => ({
-        description: `${t.merchant} - ${t.description}`,
-        amount: t.amount,
-        category: t.category,
-        date: t.date,
-      }));
-    }
+    // 3. Generate report content (demo mode — no API cost)
+    const title = `Expense Report - ${event_tag || 'General'} — ${transactions[0].employee_name}`;
+    const narrative = getDemoReportNarrative(
+      transactions[0].employee_name,
+      transactions[0].department,
+      totalAmount,
+      transactions.length,
+      event_tag
+    );
+    const lineItems = transactions.slice(0, 20).map((t) => ({
+      description: `${t.merchant} - ${t.description}`,
+      amount: t.amount,
+      category: t.category,
+      date: t.date,
+    }));
+    const policySummary: 'clean' | 'violations_present' = 'clean';
 
     // 5. Compute analytics from real transactions
     const categoryMap: Record<string, { total: number; count: number }> = {};

@@ -5,8 +5,6 @@ import {
   detectSplitCharges,
   type Transaction,
 } from '@/lib/db/queries';
-import { runAgentOnce } from '@/lib/claude/agent';
-import { COMPLIANCE_CHECK_PROMPT } from '@/lib/claude/prompts';
 import { getCategoryLimit, getMealLimit, isRestrictedMerchant } from '@/lib/policy/rules';
 
 export const dynamic = 'force-dynamic';
@@ -100,47 +98,28 @@ export async function POST() {
     }> = [];
 
     if (rawViolations.length > 0) {
-      try {
-        const prompt = `Analyze the following expense policy violations and rank each by severity (critical, high, medium, low). Return a JSON array where each element has: { "transaction_id": string, "employee_id": string, "violation_type": string, "severity": "critical"|"high"|"medium"|"low", "description": string }.
-
-Raw violations:
-${JSON.stringify(rawViolations, null, 2)}
-
-Return ONLY the JSON array, no other text.`;
-
-        const response = await runAgentOnce(prompt, COMPLIANCE_CHECK_PROMPT);
-
-        // Try to parse JSON from the response
-        const jsonMatch = response.match(/\[[\s\S]*\]/);
-        if (jsonMatch) {
-          rankedViolations = JSON.parse(jsonMatch[0]);
-        } else {
-          throw new Error('No JSON array found in response');
+      // Rule-based severity ranking (no API cost)
+      rankedViolations = rawViolations.map((v) => {
+        let severity = 'medium';
+        if (v.violation_type === 'restricted_merchant') {
+          severity = 'critical';
+        } else if (v.violation_type === 'split_charge') {
+          severity = 'high';
+        } else if (v.violation_type === 'over_limit' && v.amount && v.limit) {
+          const ratio = v.amount / v.limit;
+          if (ratio >= 3) severity = 'critical';
+          else if (ratio >= 2) severity = 'high';
+          else if (ratio >= 1.5) severity = 'medium';
+          else severity = 'low';
         }
-      } catch {
-        // Fallback: use rule-based severity logic
-        rankedViolations = rawViolations.map((v) => {
-          let severity = 'medium';
-          if (v.violation_type === 'restricted_merchant') {
-            severity = 'critical';
-          } else if (v.violation_type === 'split_charge') {
-            severity = 'high';
-          } else if (v.violation_type === 'over_limit' && v.amount && v.limit) {
-            const ratio = v.amount / v.limit;
-            if (ratio >= 3) severity = 'critical';
-            else if (ratio >= 2) severity = 'high';
-            else if (ratio >= 1.5) severity = 'medium';
-            else severity = 'low';
-          }
-          return {
-            transaction_id: v.transaction_id,
-            employee_id: v.employee_id,
-            violation_type: v.violation_type,
-            severity,
-            description: v.description,
-          };
-        });
-      }
+        return {
+          transaction_id: v.transaction_id,
+          employee_id: v.employee_id,
+          violation_type: v.violation_type,
+          severity,
+          description: v.description,
+        };
+      });
     }
 
     // 6. Insert each violation into the DB (check for duplicates)

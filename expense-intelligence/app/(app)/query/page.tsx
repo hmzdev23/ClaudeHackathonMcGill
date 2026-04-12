@@ -13,8 +13,6 @@ import {
   BarChart, Bar, LineChart, Line, PieChart, Pie, Cell,
   XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend,
 } from "recharts";
-import { getUseAltModel } from "@/lib/model-pref";
-
 const BLUE = "#38BDF8";
 const SESSIONS_KEY = "expense-chat-sessions";
 const MAX_SESSIONS = 20;
@@ -118,6 +116,57 @@ function MarkdownContent({ content }: { content: string }) {
     if (h2) { flushList(`fl-${i}`); elements.push(<h2 key={`h2-${i}`} style={{ fontSize: '0.95rem', fontWeight: 600, color: 'var(--text-main)', margin: '1rem 0 0.25rem' }}>{parseInline(h2[1], `h2-${i}`)}</h2>); i++; continue; }
     const h1 = line.match(/^# (.+)/);
     if (h1) { flushList(`fl-${i}`); elements.push(<h1 key={`h1-${i}`} style={{ fontSize: '1.05rem', fontWeight: 700, color: 'var(--text-main)', margin: '1rem 0 0.35rem' }}>{parseInline(h1[1], `h1-${i}`)}</h1>); i++; continue; }
+
+    // Markdown table (lines starting with |)
+    if (line.trimStart().startsWith('|')) {
+      flushList(`fl-${i}`);
+      const tableRows: string[][] = [];
+      let headerRow: string[] | null = null;
+      let separatorSeen = false;
+      while (i < lines.length && lines[i].trimStart().startsWith('|')) {
+        const cells = lines[i].split('|').slice(1, -1).map((c) => c.trim());
+        const isSeparator = cells.every((c) => /^:?-+:?$/.test(c));
+        if (isSeparator) {
+          separatorSeen = true;
+          if (tableRows.length > 0) { headerRow = tableRows.pop()!; }
+        } else {
+          tableRows.push(cells);
+        }
+        i++;
+      }
+      if (!separatorSeen && tableRows.length > 0) {
+        headerRow = tableRows.shift()!;
+      }
+      elements.push(
+        <div key={`tbl-${i}`} style={{ overflowX: 'auto', margin: '0.75rem 0' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: '0.8rem', fontFamily: 'var(--font-mono)' }}>
+            {headerRow && (
+              <thead>
+                <tr>
+                  {headerRow.map((h, ci) => (
+                    <th key={ci} style={{ padding: '0.45rem 0.75rem', textAlign: 'left', color: '#38BDF8', fontWeight: 600, borderBottom: '1px solid rgba(56,189,248,0.25)', whiteSpace: 'nowrap', fontSize: '0.72rem', textTransform: 'uppercase', letterSpacing: '0.04em' }}>
+                      {parseInline(h, `th-${i}-${ci}`)}
+                    </th>
+                  ))}
+                </tr>
+              </thead>
+            )}
+            <tbody>
+              {tableRows.map((row, ri) => (
+                <tr key={ri} style={{ borderBottom: '1px solid rgba(255,255,255,0.05)' }}>
+                  {row.map((cell, ci) => (
+                    <td key={ci} style={{ padding: '0.4rem 0.75rem', color: ci === 0 ? 'rgba(255,255,255,0.75)' : 'rgba(255,255,255,0.5)', whiteSpace: 'nowrap' }}>
+                      {parseInline(cell, `td-${i}-${ri}-${ci}`)}
+                    </td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      );
+      continue;
+    }
 
     // Unordered list
     const ulM = line.match(/^[-*+] (.+)/);
@@ -375,7 +424,7 @@ export default function QueryPage() {
       const res = await fetch("/api/query", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ message: userMessage, use_alt_model: getUseAltModel() }),
+        body: JSON.stringify({ message: userMessage }),
       });
 
       if (!res.ok || !res.body) throw new Error(`HTTP ${res.status}`);

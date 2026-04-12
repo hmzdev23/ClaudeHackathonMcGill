@@ -3,7 +3,6 @@
 import { useState, useRef, useEffect, useCallback, useMemo } from "react";
 import { useRouter } from "next/navigation";
 import type { ActionPlan, ActionItem, AgentStreamEvent } from "@/lib/claude/agent";
-import { getUseAltModel } from "@/lib/model-pref";
 import { Terminal, type TerminalLine } from "@/components/ui/terminal";
 
 // ── Design tokens ─────────────────────────────────────────────────────────────
@@ -345,6 +344,7 @@ export default function AutopilotPage() {
   const [idleStats, setIdleStats] = useState<{ approvals: number; violations: number; depts: number } | null>(null);
   const [planHistory, setPlanHistory] = useState<PlanHistoryEntry[]>([]);
   const terminalRef = useRef<HTMLDivElement>(null);
+  const briefingRef = useRef<HTMLDivElement>(null);
   const router = useRouter();
 
   // Load quick stats for idle screen
@@ -376,6 +376,13 @@ export default function AutopilotPage() {
     }
   }, [streamText, toolStatuses]);
 
+  // Scroll to briefing when plan arrives
+  useEffect(() => {
+    if (plan && briefingRef.current) {
+      briefingRef.current.scrollIntoView({ behavior: "smooth", block: "start" });
+    }
+  }, [plan]);
+
   const startAnalysis = useCallback(async () => {
     setMode("scanning");
     setStreamText("");
@@ -389,7 +396,7 @@ export default function AutopilotPage() {
       const res = await fetch("/api/autopilot", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ use_alt_model: getUseAltModel() }),
+        body: JSON.stringify({}),
       });
       if (!res.ok || !res.body) throw new Error("Failed to connect");
 
@@ -686,7 +693,7 @@ export default function AutopilotPage() {
 
         {/* ── BRIEFING ─────────────────────────────────────────────────────── */}
         {(mode === "briefing" || mode === "executing" || mode === "complete") && plan && (
-          <div className="animate-fade-up">
+          <div ref={briefingRef} className="animate-fade-up">
             {/* Brief header */}
             <div className="flex items-start justify-between gap-4 mb-8">
               <div>
@@ -703,7 +710,7 @@ export default function AutopilotPage() {
                 <div className="flex items-center gap-3">
                   <RiskBadge level={plan.risk_level} />
                   <span className="text-xs" style={{ color: "rgba(255,255,255,0.35)" }}>
-                    {plan.actions.filter((a) => a.auto_executable).length} auto-executable
+                    {(plan.actions ?? []).filter((a) => a.auto_executable).length} auto-executable
                   </span>
                 </div>
               </div>
