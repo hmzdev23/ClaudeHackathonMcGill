@@ -2,7 +2,6 @@
 
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
-import { UserButton } from "@clerk/nextjs";
 import { useState, useEffect } from "react";
 
 const BLUE = "#38BDF8";
@@ -176,8 +175,6 @@ export function Navbar() {
           >
             ← HOME
           </Link>
-
-          <UserButton appearance={{ elements: { avatarBox: "w-7 h-7" } }} />
 
           {/* Hamburger */}
           <button
