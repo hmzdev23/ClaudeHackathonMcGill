@@ -303,11 +303,11 @@ function VisualizationCard({ spec }: { spec: VisualizationSpec }) {
     return (
       <div style={cardStyle}>
         <p style={titleStyle}>{title}</p>
-        <ResponsiveContainer width="100%" height={200}>
-          <LineChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+        <ResponsiveContainer width="100%" height={220}>
+          <LineChart data={data} margin={{ top: 4, right: 16, left: 8, bottom: 24 }}>
             <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-            <XAxis dataKey={xk} tick={{ fontSize: 10, fill: "var(--text-sec)", fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} />
-            <YAxis tick={{ fontSize: 10, fill: "var(--text-sec)", fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} tickFormatter={v => formatValue(v, format)} width={60} />
+            <XAxis dataKey={xk} tick={{ fontSize: 9, fill: "var(--text-sec)", fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} angle={-30} textAnchor="end" interval={0} />
+            <YAxis tick={{ fontSize: 9, fill: "var(--text-sec)", fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} tickFormatter={v => formatValue(v, format)} width={72} />
             <Tooltip cursor={{ stroke: 'rgba(255,255,255,0.1)', strokeWidth: 1 }} formatter={(v: unknown) => formatValue(v, format)} contentStyle={{ background: "var(--surface)", border: "1px solid var(--borderline)", borderRadius: 6, fontSize: "0.75rem", color: "#fff" }} itemStyle={{ color: "#fff" }} />
             <Line type="monotone" dataKey={yk} stroke={BLUE} strokeWidth={2} dot={{ fill: BLUE, r: 3 }} />
           </LineChart>
@@ -344,11 +344,11 @@ function VisualizationCard({ spec }: { spec: VisualizationSpec }) {
   return (
     <div style={cardStyle}>
       <p style={titleStyle}>{title}</p>
-      <ResponsiveContainer width="100%" height={200}>
-        <BarChart data={data} margin={{ top: 4, right: 8, left: 0, bottom: 4 }}>
+      <ResponsiveContainer width="100%" height={220}>
+        <BarChart data={data} margin={{ top: 4, right: 16, left: 8, bottom: 24 }}>
           <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.06)" />
-          <XAxis dataKey={xk} tick={{ fontSize: 10, fill: "var(--text-sec)", fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} />
-          <YAxis tick={{ fontSize: 10, fill: "var(--text-sec)", fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} tickFormatter={v => formatValue(v, format)} width={60} />
+          <XAxis dataKey={xk} tick={{ fontSize: 9, fill: "var(--text-sec)", fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} angle={-30} textAnchor="end" interval={0} />
+          <YAxis tick={{ fontSize: 9, fill: "var(--text-sec)", fontFamily: "var(--font-mono)" }} axisLine={false} tickLine={false} tickFormatter={v => formatValue(v, format)} width={72} />
           <Tooltip cursor={{ fill: 'rgba(255,255,255,0.04)' }} formatter={(v: unknown) => formatValue(v, format)} contentStyle={{ background: "var(--surface)", border: "1px solid var(--borderline)", borderRadius: 6, fontSize: "0.75rem", color: "#fff" }} itemStyle={{ color: "#fff" }} />
           <Bar dataKey={yk} radius={[4, 4, 0, 0]} activeBar={false}>
             {data.map((_, idx) => <Cell key={idx} fill={VIZ_COLORS[idx % VIZ_COLORS.length]} />)}
@@ -518,12 +518,12 @@ export default function QueryPage() {
   };
 
   const suggestions = [
-    "Who are the top 5 spenders this quarter?",
-    "Show me all policy violations",
-    "Are there any suspicious split charges?",
-    "What's the budget status for Fleet Operations?",
-    "Compare Fleet Operations vs Administration spend",
-    "Generate a report for Fleet Cards expenses",
+    "Show me all open compliance violations",
+    "Which departments are closest to their budget limits?",
+    "Are there any suspicious split charges or duplicate transactions?",
+    "What were the highest individual transactions this quarter?",
+    "Compare spending across all departments",
+    "Which employees have repeated policy violations?",
   ];
 
   return (

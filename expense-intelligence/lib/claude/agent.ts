@@ -75,14 +75,16 @@ export interface AgentStreamEvent {
 async function runOneIteration(
   client: ReturnType<typeof getClaudeClient>,
   params: Anthropic.Messages.MessageCreateParamsNonStreaming,
-  send: (event: AgentStreamEvent) => void
+  sendNonText: (event: AgentStreamEvent) => void
 ): Promise<{
   completedToolUseBlocks: Anthropic.Messages.ToolUseBlock[];
   finalMessage: Anthropic.Messages.Message;
+  bufferedText: string;
 }> {
   for (let attempt = 0; attempt <= STREAM_RETRIES; attempt++) {
     const pendingToolUse: Record<string, { id: string; name: string; input_json: string }> = {};
     const completedToolUseBlocks: Anthropic.Messages.ToolUseBlock[] = [];
+    let bufferedText = '';
 
     try {
       const stream = client.messages.stream(params);
@@ -95,11 +97,12 @@ async function runOneIteration(
               name: event.content_block.name,
               input_json: '',
             };
-            send({ type: 'tool_call', tool: event.content_block.name, content: event.content_block.name });
+            sendNonText({ type: 'tool_call', tool: event.content_block.name, content: event.content_block.name });
           }
         } else if (event.type === 'content_block_delta') {
           if (event.delta.type === 'text_delta') {
-            send({ type: 'text_delta', content: event.delta.text });
+            // Buffer text — only emit it if this turns out to be the final iteration
+            bufferedText += event.delta.text;
           } else if (event.delta.type === 'input_json_delta') {
             const pending = pendingToolUse[event.index];
             if (pending) pending.input_json += event.delta.partial_json;
@@ -120,7 +123,7 @@ async function runOneIteration(
       }
 
       const finalMessage = await stream.finalMessage();
-      return { completedToolUseBlocks, finalMessage };
+      return { completedToolUseBlocks, finalMessage, bufferedText };
 
     } catch (err) {
       if (isRateLimitError(err)) {
@@ -128,7 +131,6 @@ async function runOneIteration(
       }
       if (isOverloadedError(err) && attempt < STREAM_RETRIES) {
         const delay = 1000 * Math.pow(2, attempt);
-        send({ type: 'text_delta', content: attempt === 0 ? '\n\n*Claude is busy — retrying…*' : '' });
         await sleep(delay);
         continue;
       }
@@ -166,7 +168,7 @@ export function runAgentStream(
         while (iteration < maxIterations) {
           iteration++;
 
-          const { completedToolUseBlocks, finalMessage } = await runOneIteration(
+          const { completedToolUseBlocks, finalMessage, bufferedText } = await runOneIteration(
             client,
             {
               model,
@@ -177,6 +179,11 @@ export function runAgentStream(
             },
             send
           );
+
+          // Only emit text on the final iteration (no tool calls = answer iteration)
+          if (completedToolUseBlocks.length === 0 && bufferedText) {
+            send({ type: 'text_delta', content: bufferedText });
+          }
 
           // No tool calls → done
           if (completedToolUseBlocks.length === 0) break;
