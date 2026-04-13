@@ -93,19 +93,24 @@ export async function POST(req: Request) {
       .slice(0, 20)
       .map((t) => ({ id: t.id, date: t.date, merchant: t.merchant, category: t.category, amount: t.amount, description: t.description }));
 
-    // 6. Insert expense report
-    const reportId = insertExpenseReport({
-      title,
-      employee_id,
-      employee_name: transactions[0].employee_name,
-      event_tag: event_tag || null,
-      transaction_ids: JSON.stringify(transactions.map((t) => t.id)),
-      total_amount: Math.round(totalAmount * 100) / 100,
-      policy_status: policySummary,
-      narrative,
-      generated_at: new Date().toISOString(),
-      cfo_approved: 0,
-    });
+    // 6. Insert expense report (fails gracefully on read-only FS like Vercel)
+    let reportId = `rpt-${Date.now()}`;
+    try {
+      reportId = insertExpenseReport({
+        title,
+        employee_id,
+        employee_name: transactions[0].employee_name,
+        event_tag: event_tag || null,
+        transaction_ids: JSON.stringify(transactions.map((t) => t.id)),
+        total_amount: Math.round(totalAmount * 100) / 100,
+        policy_status: policySummary,
+        narrative,
+        generated_at: new Date().toISOString(),
+        cfo_approved: 0,
+      });
+    } catch {
+      // Read-only filesystem (Vercel) — report is still returned in-memory
+    }
 
     // 7. Return the report
     return Response.json({
