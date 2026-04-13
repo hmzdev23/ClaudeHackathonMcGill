@@ -41,8 +41,20 @@ export default function ApprovalsPage() {
   const handleGenerateAI = async (id: string) => {
     setGeneratingAI(id);
     try {
-      await fetch(`/api/approvals/generate`, { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id }) });
-      await loadApprovals();
+      const res = await fetch(`/api/approvals/generate`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ id }),
+      });
+      const data = await res.json();
+      if (data.approval) {
+        // Optimistic update with the returned approval data
+        setApprovals(prev =>
+          prev.map(a => a.id === id ? { ...a, ...data.approval } : a)
+        );
+      } else {
+        await loadApprovals();
+      }
     } catch {
       console.error("AI generation failed");
     }
@@ -51,9 +63,16 @@ export default function ApprovalsPage() {
 
   const handleAction = async (id: string, action: "approved" | "denied") => {
     setActionLoading(id);
+    // Optimistic update — move the card immediately so the UI responds even on Vercel
+    setApprovals(prev =>
+      prev.map(a => a.id === id ? { ...a, status: action, resolved_at: new Date().toISOString() } : a)
+    );
     try {
-      await fetch("/api/approvals", { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ id, action }) });
-      await loadApprovals();
+      await fetch(`/api/approvals/${id}`, {
+        method: "PATCH",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ status: action }),
+      });
     } catch {
       console.error("Action failed");
     }
